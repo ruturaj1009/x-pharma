@@ -1,0 +1,90 @@
+.header {
+    background: #1565c0; /* Darker blue to match image */
+    color: #fff;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.menuBtn {
+    display: block;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px; /* Increase hit area */
+}
+
+.right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.searchBar {
+    background: rgba(255,255,255,0.15);
+    padding: 8px 15px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 250px;
+}
+
+.searchBar input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+}
+.searchBar input::placeholder {
+    color: rgba(255,255,255,0.7);
+}
+
+.iconBtn {
+    cursor: pointer;
+    font-size: 18px;
+    position: relative;
+    width: 32px;
+    height: 32px;
+    display: flex; /* Center the icon */
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+
+.iconBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Specific styling for the user profile circle */
+.userProfile {
+    background: rgba(255,255,255,0.2);
+}
+
+@media (max-width: 768px) {
+    .menuBtn {
+        display: block;
+    }
+    .searchBar {
+        display: none; /* Hide search on mobile for simplicity or convert to icon */
+    }
+}

@@ -1,0 +1,133 @@
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    background: #ffffff;
+    height: 100vh;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    padding: 15px 10px;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+    z-index: 1100;
+    transform: translateX(-100%);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+
+.sidebar.open {
+    transform: translateX(0);
+}
+
+/* Create Button */
+.createBtnWrapper {
+    margin-bottom: 20px;
+    padding: 0 5px;
+}
+.createBtn {
+    width: 100%;
+    background: #1565c0;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 25px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 10px rgba(21, 101, 192, 0.3);
+    transition: transform 0.2s;
+    font-size: 14px;
+}
+.createBtn:hover {
+    background: #0d47a1;
+    transform: translateY(-2px);
+}
+
+/* Navigation */
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    color: #444;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+    cursor: pointer;
+    justify-content: space-between; /* For dropdown arrow */
+}
+
+.navItemLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.navItem:hover {
+    background: #f0f7ff;
+    color: #1565c0;
+}
+
+.navItem.active {
+    background: #e3f2fd;
+    color: #1565c0;
+    font-weight: 600;
+}
+
+.navIcon {
+    width: 20px;
+    text-align: center;
+    color: #777;
+}
+.navItem:hover .navIcon, .navItem.active .navIcon {
+    color: #1565c0;
+}
+
+/* Submenu */
+.submenu {
+    padding-left: 20px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+}
+.submenu.open {
+    display: flex;
+}
+.submenuItem {
+    padding: 8px 15px 8px 30px;
+    color: #666;
+    text-decoration: none;
+    font-size: 13px;
+    border-radius: 6px;
+}
+.submenuItem:hover {
+    color: #1565c0;
+    background: #fcfcfc;
+}
+
+/* Mobile Toggle Overlay (Optional structure) */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+    }
+    .sidebar.mobileOpen {
+        transform: translateX(0);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+    }
+}

@@ -1,0 +1,103 @@
+.mainCard {
+    background: rgba(255,255,255,.95);
+    margin: 30px auto;
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.15);
+    animation: fade .6s ease;
+    max-width: 1000px;
+}
+
+@keyframes fade {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* STEPPER */
+.stepper {
+    display: flex;
+    align-items: center;
+    padding: 20px 28px;
+    border-bottom: 1px solid #e0e0e0;
+}
+.step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #888;
+    font-weight: 500;
+}
+.stepActive {
+    color: #000;
+}
+.circle {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #cfd8dc; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+}
+.stepActive .circle {
+    background: linear-gradient(135deg, #1f6dcc, #4fa3ff);
+    box-shadow: 0 0 10px rgba(79,163,255,.6);
+}
+.stepLine {
+    flex: 1; height: 1px; background: #ddd; margin: 0 14px;
+}
+
+/* CONTENT */
+.cardBody { padding: 40px; text-align: center; }
+.patientTitle { font-size: 28px; font-weight: 600; margin-bottom: 35px; }
+
+/* SEARCH */
+.searchWrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+.searchBox {
+    background: #fff;
+    padding: 14px 18px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.15);
+    min-width: 260px;
+    text-align: left;
+}
+.searchBox label { font-size: 14px; color: #777; display: block; }
+.searchBox input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 18px;
+    margin-top: 5px;
+}
+.searchIcon { font-size: 22px; color: #777; }
+
+/* BUTTON */
+.createBtn {
+    background: linear-gradient(135deg, #1f6dcc, #4fa3ff);
+    color: #fff;
+    padding: 14px 34px;
+    border-radius: 30px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: .3s;
+    border: none;
+    cursor: pointer;
+    display: inline-block;
+}
+.createBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(31,109,204,.5);
+    color: #fff;
+}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+    .stepper {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .stepLine { display: none; }
+    .cardBody { padding: 25px; }
+}

@@ -1,0 +1,87 @@
+/* ================= NAVBAR ================= */
+.navbar {
+    background: #1b66c9;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    flex-wrap: wrap;
+}
+
+.navLeft {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+}
+
+.navCenter {
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.navLinks {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+}
+
+.navLinks a {
+    text-decoration: none;
+    color: #fff;
+    font-weight: 500;
+    transition: 0.3s;
+    font-size: 16px;
+}
+
+.navLinks a:hover {
+    color: #ffd700;
+}
+
+.navRight {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.searchBox {
+    background: rgba(255,255,255,0.2);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.searchBox:hover {
+    background: rgba(255,255,255,0.35);
+}
+
+.navRight i {
+    position: relative;
+    cursor: pointer;
+}
+
+.navRight i:hover {
+    color: #ffd700;
+}
+
+.badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: red;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 50%;
+}
+
+/* ================= MOBILE ================= */
+@media(max-width:768px){
+    .navLinks {flex-direction:column;width:100%;align-items:center}
+    .navLeft, .navRight {flex:1;justify-content:space-between}
+    .searchBox span {display:none}
+}

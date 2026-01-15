@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# X-Pharma Healthcare Management System
 
-## Getting Started
+A modern, full-stack healthcare management application built with **Next.js 16**, **TypeScript**, and **MongoDB**. This system streamlines hospital operations by managing departments, doctors, and patients with a responsive and user-friendly interface.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+-   **Dashboard**: Centralized hub for hospital metrics (placeholder).
+-   **Department Management**: Create and manage hospital departments.
+-   **User Management**:
+    -   **Patients**: Full CRUD operations with search, pagination, and optimized creating flow (Toast notifications, optional fields).
+    -   **Doctors**: Dedicated portal for doctor management with advanced filtering and pagination.
+-   **Role-Based Access**: Specialized views and logic for `PATIENT`, `DOCTOR`, and `ADMIN` roles using Mongoose discriminators.
+-   **Modern UI/UX**:
+    -   Responsive Flexbox layouts.
+    -   Sticky headers and independent scrollable lists.
+    -   Polished, vibrant UI components with interactive states.
+    -   Glassmorphism effects and smooth transitions.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠 Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+-   **Frontend**: Next.js 16 (App Router), React 19, CSS Modules (Flexbox/Grid).
+-   **Backend**: Next.js API Routes (Serverless).
+-   **Database**: MongoDB with Mongoose (Schemas, Discriminators).
+-   **Validation**: Zod for type-safe API validation.
+-   **Notifications**: `react-hot-toast`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📦 Installation
 
-## Learn More
+1.  **Clone the repository**:
+    ```bash
+    git clone <repository-url>
+    cd x-pharma
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3.  **Environment Setup**:
+    Create a `.env.local` file in the root directory and add your MongoDB connection string:
+    ```env
+    MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/x-pharma
+    ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
+    Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-## Deploy on Vercel
+## 📂 Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+-   `app/`: Next.js App Router pages and API routes.
+    -   `api/v1/`: REST API endpoints.
+    -   `patients/`: Patient management pages.
+    -   `doctors/`: Doctor management pages.
+-   `models/`: Mongoose schemas (`User`, `Department`, `Patient`, `Doctor`).
+-   `lib/`: Database connection helpers (`db.ts`).
+-   `types/`: TypeScript interfaces and API response types.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🤝 Contributing
+
+1.  Fork the project.
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/AmazingFeature`).
+5.  Open a Pull Request.
+
+## 📝 License
+
+This project is licensed under the MIT License.

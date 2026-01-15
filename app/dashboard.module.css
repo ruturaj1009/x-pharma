@@ -1,0 +1,134 @@
+/* HERO */
+.hero {
+    position: relative;
+    height: 180px;
+    background: url("https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop") center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.heroOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.3); /* Darken for text readability */
+}
+
+.hero h1 {
+    color: #fff;
+    font-size: 32px;
+    font-weight: 400;
+    z-index: 1;
+    animation: fadeDown 1s ease;
+}
+
+@keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Action Button centered below Hero */
+.centerAction {
+    display: flex;
+    justify-content: center;
+    margin-top: -25px; /* Overlap hero boundary or slightly below */
+    margin-bottom: 20px;
+    z-index: 2;
+    position: relative;
+}
+
+.actionBtn {
+    background: #1565c0;
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s;
+}
+
+.actionBtn:hover {
+    transform: translateY(-2px);
+    background: #0d47a1;
+}
+
+/* GRID */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 30px 20px;
+    padding: 20px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    text-decoration: none;
+    color: #333;
+    gap: 10px;
+    transition: transform 0.2s;
+    background: transparent; /* No card background, just icon */
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.iconWrapper {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+}
+/* Replicate the "Illustrative" look with colors */
+.iconGreen { color: #2e7d32; }
+.iconBlue { color: #1565c0; }
+.iconPurple { color: #7b1fa2; }
+.iconOrange { color: #f57c00; }
+.iconRed { color: #d32f2f; }
+
+.label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+/* LIVE CHAT */
+.liveChat {
+    position: fixed;
+    right: 30px;
+    bottom: 30px;
+    background: #4caf50;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 999;
+}
+.liveChatClose {
+    font-size: 14px;
+    margin-left: 8px;
+    opacity: 0.8;
+}
+
+/* Responsive */
+@media(max-width: 600px) {
+    .grid { padding: 20px; grid-template-columns: repeat(3, 1fr); }
+    .label { font-size: 12px; }
+}
