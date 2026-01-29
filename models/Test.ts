@@ -1,35 +1,5 @@
-import mongoose, { Schema, Document, model, models } from 'mongoose';
-
-export interface ITest extends Document {
-    name: string;
-    type: 'normal' | 'descriptive' | 'group';
-    shortCode?: string;
-    tags?: string[];
-    price: number;
-    revenueShare: number;
-    department?: mongoose.Types.ObjectId;
-
-    // Normal Test Fields
-    unit?: string;
-    method?: string;
-    formula?: string;
-    interpretation?: string;
-    referenceRanges?: {
-        name: string;
-        min: number;
-        max: number;
-    }[];
-
-    // Descriptive Test Fields
-    template?: string;
-
-    // Group Test Fields
-    subTests?: mongoose.Types.ObjectId[];
-    parentGroup?: mongoose.Types.ObjectId;
-
-    createdAt: Date;
-    updatedAt: Date;
-}
+import mongoose, { Schema, model, models } from 'mongoose';
+import { ITest } from '@/types/test';
 
 const ReferenceRangeSchema = new Schema({
     name: { type: String, required: true },

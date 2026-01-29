@@ -29,7 +29,23 @@ interface BillDetail {
     status: string;
     createdAt: string;
     discountType: 'AMOUNT' | 'PERCENTAGE';
+    reportStatus?: string;
+    reportId?: string;
+    reportMongoId?: string;
 }
+
+import { ReportStatus } from '@/enums/report';
+
+const statusMap: Record<string, string> = {
+    [ReportStatus.INITIAL]: 'Initial',
+    [ReportStatus.IN_PROGRESS]: 'In Process',
+    [ReportStatus.COMPLETED]: 'Completed',
+    [ReportStatus.VERIFIED]: 'Verified',
+    [ReportStatus.PRINTED]: 'Printed',
+    [ReportStatus.DELIVERED]: 'Delivered',
+    // Legacy mapping if needed, or rely on enum value match if string matches
+    'PENDING': 'Initial' 
+};
 
 export default function ViewBillPage() {
     const params = useParams();
@@ -102,7 +118,10 @@ export default function ViewBillPage() {
                         </div>
                         <div style={{marginBottom:'5px'}}>
                             <span className={styles.label}>Report Status:</span>
-                            <span className={styles.value}>Initial</span>
+                            {/* Use mapped status or fallback to raw or Initial */}
+                            <span className={styles.value} style={{fontWeight:700, color:'#2563eb'}}>
+                                {bill.reportStatus ? (statusMap[bill.reportStatus] || bill.reportStatus) : 'Initial'}
+                            </span>
                         </div>
                         <div>
                             <span className={styles.label}>Bill ID:</span>
@@ -166,7 +185,19 @@ export default function ViewBillPage() {
                 <div className={styles.actions}>
                     <button className={`${styles.btn} ${styles.btnGreen}`}>PRINT</button>
                     <button className={`${styles.btn} ${styles.btnGreen}`}>PRINT BARCODE</button>
-                    <button className={`${styles.btn} ${styles.btnBlue}`}>VIEW REPORT</button>
+                    
+                    {bill.reportMongoId ? (
+                        <Link href={`/reports/${bill.reportMongoId}`} style={{display: 'contents'}}>
+                             <button className={`${styles.btn} ${styles.btnBlue}`}>VIEW REPORT</button>
+                        </Link>
+                    ) : (
+                        <button className={`${styles.btn} ${styles.btnBlue}`} disabled>VIEW REPORT (N/A)</button>
+                    )}
+
+                    <Link href={`/bills/${bill._id}/add-test`} style={{display: 'contents'}}>
+                        <button className={`${styles.btn} ${styles.btnGreen}`} style={{background:'#f59e0b'}}>+ ADD TEST</button>
+                    </Link>
+
                     <button className={`${styles.btn} ${styles.btnBlue}`}>PRINT SETTINGS</button>
                     <button className={`${styles.btn} ${styles.btnGreen}`}>SEND WHATSAPP</button>
                     <button className={`${styles.btn} ${styles.btnBlue}`}>MORE</button>

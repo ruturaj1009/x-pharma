@@ -19,11 +19,6 @@ const DepartmentSchema: Schema<IDepartment> = new Schema(
     }
 );
 
-// Force recompilation in dev to ensure schema changes (like new fields) are picked up
-if (process.env.NODE_ENV !== 'production') {
-    if (mongoose.models.Department) {
-        delete mongoose.models.Department;
-    }
-}
+// Standard singleton pattern is sufficient
 
 export const Department = mongoose.models.Department || mongoose.model<IDepartment>('Department', DepartmentSchema);
