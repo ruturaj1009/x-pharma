@@ -1,7 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useReactToPrint } from 'react-to-print';
+import { BillReceipt } from '../../components/BillReceipt';
+import { BarcodeStickerSheet } from '../../components/BarcodeStickerSheet';
 import styles from './page.module.css';
 
 interface BillDetail {
@@ -29,12 +32,49 @@ interface BillDetail {
     status: string;
     createdAt: string;
     discountType: 'AMOUNT' | 'PERCENTAGE';
+    reportStatus?: string;
+    reportId?: string;
+    reportMongoId?: string;
 }
+
+import { ReportStatus } from '@/enums/report';
+
+const statusMap: Record<string, string> = {
+    [ReportStatus.INITIAL]: 'Initial',
+    [ReportStatus.IN_PROGRESS]: 'In Process',
+    [ReportStatus.COMPLETED]: 'Completed',
+    [ReportStatus.VERIFIED]: 'Verified',
+    [ReportStatus.PRINTED]: 'Printed',
+    [ReportStatus.DELIVERED]: 'Delivered',
+    // Legacy mapping if needed, or rely on enum value match if string matches
+    'PENDING': 'Initial' 
+};
 
 export default function ViewBillPage() {
     const params = useParams();
     const [bill, setBill] = useState<BillDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const componentRef = useRef<HTMLDivElement>(null);
+    const barcodeRef = useRef<HTMLDivElement>(null);
+
+    // Barcode Modal State
+    const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+    const [barcodeSettings, setBarcodeSettings] = useState({
+        includeName: true,
+        includeMeta: true,
+        count: 1
+    });
+
+    const handlePrint = useReactToPrint({
+        contentRef: componentRef,
+        documentTitle: `Bill-${bill?._id || 'Receipt'}`,
+    });
+
+    const handleBarcodePrint = useReactToPrint({
+        contentRef: barcodeRef,
+        documentTitle: `Barcode-${bill?._id || 'Stickers'}`,
+        onAfterPrint: () => setShowBarcodeModal(false)
+    });
 
     useEffect(() => {
         if (params.id) {
@@ -102,7 +142,10 @@ export default function ViewBillPage() {
                         </div>
                         <div style={{marginBottom:'5px'}}>
                             <span className={styles.label}>Report Status:</span>
-                            <span className={styles.value}>Initial</span>
+                            {/* Use mapped status or fallback to raw or Initial */}
+                            <span className={styles.value} style={{fontWeight:700, color:'#2563eb'}}>
+                                {bill.reportStatus ? (statusMap[bill.reportStatus] || bill.reportStatus) : 'Initial'}
+                            </span>
                         </div>
                         <div>
                             <span className={styles.label}>Bill ID:</span>
@@ -164,9 +207,21 @@ export default function ViewBillPage() {
 
                 {/* ACTIONS */}
                 <div className={styles.actions}>
-                    <button className={`${styles.btn} ${styles.btnGreen}`}>PRINT</button>
-                    <button className={`${styles.btn} ${styles.btnGreen}`}>PRINT BARCODE</button>
-                    <button className={`${styles.btn} ${styles.btnBlue}`}>VIEW REPORT</button>
+                    <button onClick={() => handlePrint()} className={`${styles.btn} ${styles.btnGreen}`}>PRINT</button>
+                    <button onClick={() => setShowBarcodeModal(true)} className={`${styles.btn} ${styles.btnGreen}`}>PRINT BARCODE</button>
+                    
+                    {bill.reportMongoId ? (
+                        <Link href={`/reports/${bill.reportMongoId}`} style={{display: 'contents'}}>
+                             <button className={`${styles.btn} ${styles.btnBlue}`}>VIEW REPORT</button>
+                        </Link>
+                    ) : (
+                        <button className={`${styles.btn} ${styles.btnBlue}`} disabled>VIEW REPORT (N/A)</button>
+                    )}
+
+                    <Link href={`/bills/${bill._id}/add-test`} style={{display: 'contents'}}>
+                        <button className={`${styles.btn} ${styles.btnGreen}`} style={{background:'#f59e0b'}}>+ ADD TEST</button>
+                    </Link>
+
                     <button className={`${styles.btn} ${styles.btnBlue}`}>PRINT SETTINGS</button>
                     <button className={`${styles.btn} ${styles.btnGreen}`}>SEND WHATSAPP</button>
                     <button className={`${styles.btn} ${styles.btnBlue}`}>MORE</button>
@@ -177,6 +232,83 @@ export default function ViewBillPage() {
             <Link href="/bills" className={styles.backBtn}>
                 GO TO BILLS LIST
             </Link>
+
+            {/* Hidden Receipt Component for Printing */}
+            <div style={{ display: 'none' }}>
+                {bill && <BillReceipt ref={componentRef} bill={bill} />}
+                {bill && (
+                    <BarcodeStickerSheet 
+                        ref={barcodeRef}
+                        billId={bill._id}
+                        patientName={`${bill.patient.title} ${bill.patient.firstName} ${bill.patient.lastName}`}
+                        patientAge={bill.patient.age}
+                        patientGender={bill.patient.gender}
+                        includeName={barcodeSettings.includeName}
+                        includeMeta={barcodeSettings.includeMeta}
+                        count={barcodeSettings.count}
+                    />
+                )}
+            </div>
+
+            {/* Barcode Print Modal */}
+            {showBarcodeModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }}>
+                    <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', width: '400px' }}>
+                        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600 }}>Print Barcode Sticker</h2>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+                            <input 
+                                type="checkbox" 
+                                id="includeName" 
+                                checked={barcodeSettings.includeName} 
+                                onChange={e => setBarcodeSettings({...barcodeSettings, includeName: e.target.checked})}
+                                style={{ width: '18px', height: '18px', marginRight: '10px' }}
+                            />
+                            <label htmlFor="includeName" style={{ fontSize: '14px' }}>Include Patient Name</label>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                            <input 
+                                type="checkbox" 
+                                id="includeMeta" 
+                                checked={barcodeSettings.includeMeta} 
+                                onChange={e => setBarcodeSettings({...barcodeSettings, includeMeta: e.target.checked})}
+                                style={{ width: '18px', height: '18px', marginRight: '10px' }}
+                            />
+                            <label htmlFor="includeMeta" style={{ fontSize: '14px' }}>Include Age & Gender</label>
+                        </div>
+
+                        <div style={{ marginBottom: '25px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', color: '#666' }}>Count</label>
+                            <input 
+                                type="number" 
+                                value={barcodeSettings.count} 
+                                onChange={e => setBarcodeSettings({...barcodeSettings, count: Math.max(1, Number(e.target.value))})}
+                                min="1"
+                                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} 
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button 
+                                onClick={() => setShowBarcodeModal(false)}
+                                style={{ padding: '8px 16px', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#333' }}
+                            >
+                                CANCEL
+                            </button>
+                            <button 
+                                onClick={() => handleBarcodePrint()}
+                                style={{ padding: '10px 20px', border: 'none', background: '#1d4ed8', color: 'white', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                                PRINT BARCODE STICKER
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

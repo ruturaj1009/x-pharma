@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Test from '@/models/Test';
+import { Department } from '@/models/Department'; // Ensure Department is registered
 
 export async function POST(req: NextRequest) {
     await dbConnect();
@@ -35,6 +36,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     await dbConnect();
+    // Force registration
+    console.log("Department Model Registered:", !!Department);
     try {
         const { searchParams } = new URL(req.url);
         const type = searchParams.get('type');
@@ -54,7 +57,9 @@ export async function GET(req: NextRequest) {
         // Let's add a flag `includeSubtests`
 
         const includeSubtests = searchParams.get('includeSubtests');
-        if (!includeSubtests) {
+
+        // Only hide subtests if NOT searching and NOT explicitly asked to include them
+        if (!includeSubtests && !search) {
             query.parentGroup = { $exists: false };
         }
 

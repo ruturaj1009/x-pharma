@@ -4,6 +4,7 @@ import Bill from '@/models/Bill';
 import { User, Doctor } from '@/models/User';
 import { ApiResponse } from '@/types/api';
 import { UserRole } from '@/types/user';
+import { ReportStatus } from '@/enums/report';
 
 export async function POST(request: Request) {
     await dbConnect();
@@ -67,6 +68,50 @@ export async function POST(request: Request) {
 
         // Populate to return full data
         await bill.populate(['patient', 'doctor', 'tests.test']);
+
+        // --- Create Linked Report ---
+        try {
+            const Report = (await import('@/models/Report')).default;
+            const reportCount = await Report.countDocuments();
+            // Simple sequential ID. For production, consider a more robust counter.
+            const reportId = (reportCount + 1).toString();
+
+            const reportResults = bill.tests.map((t: any) => ({
+                testId: t.test._id,
+                testName: t.test.name,
+                status: 'PENDING'
+            }));
+
+            try {
+                await Report.create({
+                    bill: bill._id,
+                    patient: bill.patient._id,
+                    doctor: bill.doctor._id,
+                    reportId: reportId,
+                    results: reportResults,
+                    status: ReportStatus.INITIAL
+                });
+            } catch (initErr) {
+                console.warn("Report creation with INITIAL failed, retrying with PENDING:", initErr);
+                // Fallback for stale schema cache
+                await Report.create({
+                    bill: bill._id,
+                    patient: bill.patient._id,
+                    doctor: bill.doctor._id,
+                    reportId: reportId,
+                    results: reportResults,
+                    status: ReportStatus.PENDING
+                });
+            }
+        } catch (reportError) {
+            console.error("Failed to auto-create report:", reportError);
+            // Return validation error in response for debugging
+            return NextResponse.json({
+                status: 201,
+                data: bill,
+                warning: "Report auto-creation failed: " + (reportError as Error).message
+            });
+        }
 
         return NextResponse.json({
             status: 201,

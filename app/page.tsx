@@ -27,7 +27,7 @@ export default function Home() {
             <span className={styles.label}>Bills</span>
         </Link>
         
-        <Link href="#" className={styles.card}>
+        <Link href="/reports" className={styles.card}>
             <div className={`${styles.iconWrapper} ${styles.iconPurple}`}>
                 <i className="fa fa-file-lines"></i>
             </div>

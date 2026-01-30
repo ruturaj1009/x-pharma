@@ -1,44 +1,6 @@
-import mongoose, { Schema, Document, model, models } from 'mongoose';
-import { IUser } from '@/types/user';
-import { ITest } from './Test';
-
-export enum PaymentType {
-    CASH = 'CASH',
-    UPI = 'UPI',
-    CARD = 'CARD',
-    NET_BANKING = 'NET_BANKING'
-}
-
-export enum BillStatus {
-    DRAFT = 'DRAFT',
-    PAID = 'PAID',
-    PARTIAL = 'PARTIAL',
-    PENDING = 'PENDING'
-}
-
-export interface IBill extends Document {
-    patient: mongoose.Types.ObjectId | IUser;
-    doctor: mongoose.Types.ObjectId | IUser; // Can be a "SELF" doctor record
-
-    tests: {
-        test: mongoose.Types.ObjectId | ITest;
-        price: number; // Snapshot of price at billing
-    }[];
-
-    totalAmount: number;
-    discountAmount: number;
-    discountType: 'AMOUNT' | 'PERCENTAGE';
-    paidAmount: number;
-    dueAmount: number;
-
-    paymentType: PaymentType;
-    status: BillStatus;
-
-    notes?: string;
-
-    createdAt: Date;
-    updatedAt: Date;
-}
+import mongoose, { Schema, model, models } from 'mongoose';
+import { IBill } from '@/types/bill';
+import { PaymentType, BillStatus } from '@/enums/bill';
 
 const BillSchema = new Schema<IBill>({
     patient: { type: Schema.Types.ObjectId, ref: 'User', required: true },
