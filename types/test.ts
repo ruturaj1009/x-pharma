@@ -23,9 +23,9 @@ export interface ITest extends Document {
     formula?: string;
     interpretation?: string;
     referenceRanges?: {
-        name: string;
-        min: number;
-        max: number;
+        name?: string;
+        min?: string;
+        max?: string;
     }[];
 
     // Descriptive Test Fields

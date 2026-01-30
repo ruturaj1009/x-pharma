@@ -35,7 +35,7 @@ function CreateTestContent({ params }: { params: Promise<{ departmentId: string 
     const [unit, setUnit] = useState('');
     const [method, setMethod] = useState('');
     const [formula, setFormula] = useState('');
-    const [referenceRanges, setReferenceRanges] = useState<{name: string, min: number, max: number}[]>([]);
+    const [referenceRanges, setReferenceRanges] = useState<{name: string, min: string, max: string}[]>([]);
     
     // Toggles for Normal Test Extras
     const [showMethod, setShowMethod] = useState(false);
@@ -67,7 +67,7 @@ function CreateTestContent({ params }: { params: Promise<{ departmentId: string 
     }
 
     const handleAddReferenceRange = () => {
-        setReferenceRanges([...referenceRanges, { name: '', min: 0, max: 0 }]);
+        setReferenceRanges([...referenceRanges, { name: '', min: '', max: '' }]);
     };
 
     const handleRemoveReferenceRange = (index: number) => {
@@ -83,6 +83,16 @@ function CreateTestContent({ params }: { params: Promise<{ departmentId: string 
     const handleSubmit = async () => {
         if (!name.trim()) return toast.error('Test Name is required');
         if (price < 0) return toast.error('Price must be positive');
+
+        if (testType === 'normal') {
+             for (const range of referenceRanges) {
+                 const hasMin = range.min && range.min.trim();
+                 const hasMax = range.max && range.max.trim();
+                 if (!hasMin && !hasMax) {
+                     return toast.error('Reference Ranges must have at least Min or Max value');
+                 }
+             }
+        }
 
         setSubmitting(true);
         try {
@@ -253,11 +263,11 @@ function CreateTestContent({ params }: { params: Promise<{ departmentId: string 
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ fontSize: '12px', color: '#64748b' }}>Min</label>
-                                    <input type="number" value={range.min} onChange={e => handleRangeChange(idx, 'min', Number(e.target.value))} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                    <input type="text" value={range.min} onChange={e => handleRangeChange(idx, 'min', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ fontSize: '12px', color: '#64748b' }}>Max</label>
-                                    <input type="number" value={range.max} onChange={e => handleRangeChange(idx, 'max', Number(e.target.value))} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                    <input type="text" value={range.max} onChange={e => handleRangeChange(idx, 'max', e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
                                 </div>
                                 <button onClick={() => handleRemoveReferenceRange(idx)} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', height: '35px' }}>×</button>
                             </div>
