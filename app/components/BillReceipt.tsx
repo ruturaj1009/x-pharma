@@ -1,0 +1,167 @@
+
+import React from 'react';
+import Barcode from 'react-barcode';
+
+interface BillReceiptProps {
+    bill: {
+        _id: string;
+        patient: {
+            title: string;
+            firstName: string;
+            lastName: string;
+            gender: string;
+            age: number;
+        };
+        doctor: {
+            firstName: string;
+            lastName: string;
+        };
+        tests: {
+            test: { name: string };
+            price: number;
+        }[];
+        totalAmount: number;
+        discountAmount: number;
+        paidAmount: number;
+        dueAmount: number;
+        createdAt: string;
+    };
+    showWatermark?: boolean;
+}
+
+export const BillReceipt = React.forwardRef<HTMLDivElement, BillReceiptProps>(({ bill, showWatermark = false }, ref) => {
+    
+    const formattedDate = new Date(bill.createdAt).toLocaleString('en-IN', {
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+    });
+
+    const billIdShort = bill._id.substring(bill._id.length - 6).toUpperCase();
+    const grandTotal = bill.totalAmount - bill.discountAmount;
+
+    return (
+        <div ref={ref} style={{ 
+            width: '100%', 
+            maxWidth: '800px', 
+            margin: '0 auto', 
+            padding: '40px', 
+            backgroundColor: 'white',
+            fontFamily: 'Arial, sans-serif',
+            color: '#000',
+            position: 'relative'
+        }}>
+            
+            {/* Watermark */}
+            {showWatermark && (
+            <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%) rotate(-45deg)',
+                fontSize: '60px',
+                color: 'rgba(0,0,0,0.05)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                zIndex: 0
+            }}>
+                Health Amaze Demo Account
+            </div>
+            )}
+
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>Raj Labs</h1>
+                <p style={{ fontSize: '14px', margin: '5px 0' }}>Balasore</p>
+                <div style={{ borderBottom: '1px solid #ccc', margin: '15px 0' }}></div>
+                <h2 style={{ fontSize: '16px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0 }}>BILL RECEIPT</h2>
+            </div>
+
+            {/* Meta Grid */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', fontSize: '14px', lineHeight: '1.6' }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex' }}>
+                        <span style={{ width: '80px', color: '#666' }}>Patient:</span>
+                        <span style={{ fontWeight: 600 }}>{bill.patient.title} {bill.patient.firstName} {bill.patient.lastName}</span>
+                    </div>
+                    <div style={{ display: 'flex' }}>
+                        <span style={{ width: '80px', color: '#666' }}>Sex / Age:</span>
+                        <span>{bill.patient.gender} / {bill.patient.age} Years</span>
+                    </div>
+                    <div style={{ display: 'flex' }}>
+                        <span style={{ width: '80px', color: '#666' }}>Ref. by:</span>
+                        <span>{bill.doctor.firstName === 'SELF' ? 'Self' : `Dr. ${bill.doctor.firstName} ${bill.doctor.lastName}`}</span>
+                    </div>
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: '40px' }}>
+                     <div style={{ display: 'flex' }}>
+                        <span style={{ width: '60px', color: '#666' }}>Date:</span>
+                        <span style={{ fontWeight: 600 }}>{formattedDate}</span>
+                    </div>
+                     <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span style={{ width: '60px', color: '#666' }}>Bill ID:</span>
+                        <span style={{ fontWeight: 600 }}>{billIdShort}</span>
+                    </div>
+                </div>
+
+                <div style={{ width: '120px', textAlign: 'right' }}>
+                    <Barcode 
+                        value={billIdShort} 
+                        height={30} 
+                        width={1.5} 
+                        displayValue={true} 
+                        fontSize={10} 
+                        margin={0}
+                    />
+                </div>
+            </div>
+
+            {/* Table */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                <thead>
+                    <tr style={{ borderTop: '2px solid #000', borderBottom: '1px solid #000' }}>
+                        <th style={{ textAlign: 'left', padding: '8px 0', fontSize: '14px' }}>Sl.</th>
+                        <th style={{ textAlign: 'left', padding: '8px 0', fontSize: '14px' }}>Test Name</th>
+                        <th style={{ textAlign: 'right', padding: '8px 0', fontSize: '14px' }}>Price (₹)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {bill.tests.map((item, index) => (
+                        <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '8px 0', fontSize: '14px' }}>{index + 1}</td>
+                            <td style={{ padding: '8px 0', fontSize: '14px' }}>{item.test.name}</td>
+                            <td style={{ textAlign: 'right', padding: '8px 0', fontSize: '14px' }}>{item.price}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            {/* Totals */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '10px' }}>
+                <div style={{ display: 'flex', width: '200px', justifyContent: 'space-between', marginBottom: '5px' }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '14px' }}>Grand Total</span>
+                    <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{grandTotal}</span>
+                </div>
+                <div style={{ display: 'flex', width: '200px', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '14px' }}>Paid</span>
+                    <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{bill.paidAmount}</span>
+                </div>
+            </div>
+
+            {/* Footer Signatory */}
+            <div style={{ marginTop: '60px', textAlign: 'right' }}>
+                 <div style={{ display: 'inline-block', textAlign: 'center' }}>
+                    <div style={{ borderTop: '2px solid #000', width: '200px', marginBottom: '5px' }}></div>
+                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Authorized Signatory</span>
+                 </div>
+            </div>
+
+        </div>
+    );
+});
+
+BillReceipt.displayName = 'BillReceipt';
