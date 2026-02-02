@@ -5,11 +5,22 @@ import { ReportStatus } from '@/enums/report';
 const ResultSchema = new Schema({
     testId: { type: Schema.Types.ObjectId, ref: 'Test', required: true },
     testName: { type: String, required: true },
+    type: { type: String, enum: ['normal', 'descriptive', 'group'], default: 'normal' },
     resultValue: { type: String },
     unit: { type: String },
     referenceRange: { type: String },
     status: { type: String, default: 'PENDING' },
-    remarks: { type: String }
+    remarks: { type: String },
+    groupResults: [new Schema({
+        testId: { type: Schema.Types.ObjectId, ref: 'Test', required: true },
+        testName: { type: String, required: true },
+        type: { type: String, default: 'normal' },
+        resultValue: { type: String },
+        unit: { type: String },
+        referenceRange: { type: String },
+        status: { type: String, default: 'PENDING' },
+        remarks: { type: String }
+    }, { _id: false })]
 }, { _id: false });
 
 const ReportSchema = new Schema<IReport>({

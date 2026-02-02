@@ -29,6 +29,7 @@ interface Test {
     name: string;
     price: number;
     department?: { name: string };
+    type: 'normal' | 'descriptive' | 'group';
 }
 
 export default function CreateBillPage() {
@@ -729,9 +730,22 @@ export default function CreateBillPage() {
                                             onMouseOver={(e) => { if(!selectedTests.find(st => st._id === t._id)) e.currentTarget.style.background = '#f8fafc' }}
                                             onMouseOut={(e) => { if(!selectedTests.find(st => st._id === t._id)) e.currentTarget.style.background = 'white' }}
                                         >
-                                            <div>
-                                                <div style={{fontWeight:600, fontSize: '15px', color: '#1e293b'}}>{t.name}</div>
-                                                <div style={{fontSize:'13px', color:'#64748b', marginTop:'2px'}}>{t.department?.name}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ 
+                                                    width: '32px', height: '32px', borderRadius: '6px', 
+                                                    background: t.type === 'group' ? '#fef2f2' : (t.type === 'descriptive' ? '#fffbeb' : '#f0fdf4'), 
+                                                    color: t.type === 'group' ? '#b91c1c' : (t.type === 'descriptive' ? '#b45309' : '#15803d'),
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: '14px'
+                                                }}>
+                                                    {t.type === 'group' && <i className="fa fa-layer-group"></i>}
+                                                    {t.type === 'descriptive' && <i className="fa fa-file-lines"></i>}
+                                                    {(!t.type || t.type === 'normal') && <i className="fa fa-flask"></i>}
+                                                </div>
+                                                <div>
+                                                    <div style={{fontWeight:600, fontSize: '15px', color: '#1e293b'}}>{t.name}</div>
+                                                    <div style={{fontSize:'13px', color:'#64748b', marginTop:'2px'}}>{t.department?.name}</div>
+                                                </div>
                                             </div>
                                             <div style={{fontWeight:600, color:'#3b82f6'}}>₹{t.price}</div>
                                         </div>

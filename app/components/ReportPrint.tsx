@@ -28,27 +28,39 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
 
     return (
         <div ref={ref} style={{ width: '210mm', margin: '0 auto', background: 'white', fontFamily: 'Arial, sans-serif' }}>
+            <style type="text/css" media="print">
+                {`
+                @page { size: A4; margin: 0; }
+                body { margin: 0; }
+                `}
+            </style>
             {allResults.map((result, index) => {
                 const currentPage = index + 1;
                 const isLastPage = index === allResults.length - 1;
                 
-                // Get interpretation for THIS test only
-                const interpretation = result.testId?.interpretation 
-                    ? { title: result.testName, text: result.testId.interpretation }
-                    : null;
+                // Helper to determine if it's a group
+                const testDef = result.testId;
+                const isGroup = result.type === 'group' || (testDef?.type === 'group' && result.groupResults && result.groupResults.length > 0);
 
-                // Format ref range
-                let displayRefRange = result.referenceRange;
-                if (!displayRefRange && result.testId?.referenceRanges?.length > 0) {
-                        displayRefRange = result.testId.referenceRanges.map((r: any) => {
-                        let val = '';
-                        if (r.min && r.max) val = `${r.min} - ${r.max}`;
-                        else if (r.min) val = `> ${r.min}`;
-                        else if (r.max) val = `< ${r.max}`;
-                        return r.name ? `${r.name}: ${val}` : val;
-                        }).filter(Boolean).join(', ');
+                // Flatten rows for this page (either single result or group sub-results)
+                let rowsToRender = [];
+                if (isGroup) {
+                    // For groups, we render the header row, then all sub-results
+                    // We can add a flag to distinguish styling
+                    if (result.groupResults) {
+                         const flattenGroup = (items: any[], level = 0) => {
+                             items.forEach(item => {
+                                 rowsToRender.push({ ...item, isGroupHeader: item.type === 'group', level });
+                                 if (item.type === 'group' && item.groupResults) {
+                                     flattenGroup(item.groupResults, level + 1);
+                                 }
+                             });
+                         };
+                         flattenGroup(result.groupResults);
+                    }
+                } else {
+                    rowsToRender.push(result);
                 }
-                const isDescriptive = result.testId?.type === 'descriptive';
 
                 return (
                     <div key={index} style={{ 
@@ -56,7 +68,8 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                         width: '210mm',
                         padding: '20px', 
                         pageBreakAfter: isLastPage ? 'auto' : 'always',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        minHeight: '296mm' // Reduced slightly to prevent spillover
                     }}>
                         {/* Watermark */}
                         {report.watermarkText !== false && (
@@ -119,6 +132,13 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                                 {result.testId?.department?.name || 'General'}
                             </div>
 
+                            {/* Group Header Title if Group */}
+                            {isGroup && (
+                                <div style={{ fontWeight: 'bold', fontSize: '15px', marginBottom: '10px', textDecoration: 'underline' }}>
+                                    {result.testName}
+                                </div>
+                            )}
+
                             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid #000' }}>
@@ -129,29 +149,85 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '8px 5px', verticalAlign: 'top' }}>
-                                            <div style={{ fontWeight: 'bold' }}>{result.testName}</div>
-                                            {result.method && <div style={{ fontSize:'10px', color: '#666' }}>Method: {result.method}</div>}
-                                        </td>
-                                        <td style={{ padding: '8px 5px', verticalAlign: 'top', fontWeight: 'bold' }}>
-                                            {isDescriptive ? '' : result.resultValue}
-                                        </td>
-                                        <td style={{ padding: '8px 5px', verticalAlign: 'top' }}>
-                                                {isDescriptive ? '' : displayRefRange}
-                                        </td>
-                                        <td style={{ padding: '8px 5px', verticalAlign: 'top' }}>
-                                                {isDescriptive ? '' : (result.unit || result.testId?.unit)}
-                                        </td>
-                                    </tr>
+                                    {rowsToRender.map((row: any, rIdx) => {
+                                        // Row specific logic
+                                        const rTestDef = row.testId || {};
+                                        const rIsDescriptive = rTestDef.type === 'descriptive' || row.type === 'descriptive';
+                                        
+                                        // Ref Range Format
+                                        let displayRefRange = row.referenceRange;
+                                        if (!displayRefRange && rTestDef.referenceRanges?.length > 0) {
+                                                displayRefRange = rTestDef.referenceRanges.map((r: any) => {
+                                                let val = '';
+                                                if (r.min && r.max) val = `${r.min} - ${r.max}`;
+                                                else if (r.min) val = `> ${r.min}`;
+                                                else if (r.max) val = `< ${r.max}`;
+                                                return r.name ? `${r.name}: ${val}` : val;
+                                                }).filter(Boolean).join(', ');
+                                        }
+
+                                        // Indentation style for nested
+                                        const paddingLeft = (row.level || 0) * 20 + 5;
+                                        
+                                        // If this row is actually a nested group header
+                                        if (row.isGroupHeader) {
+                                            return (
+                                                <tr key={rIdx} style={{ background: '#f9f9f9' }}>
+                                                    <td colSpan={4} style={{ padding: '8px 5px', paddingLeft: `${paddingLeft}px`, fontWeight: 'bold' }}>
+                                                        {row.testName}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }
+
+                                        return (
+                                            <tr key={rIdx} style={{ borderBottom: '1px solid #eee' }}>
+                                                <td style={{ padding: '8px 5px', paddingLeft: `${paddingLeft}px`, verticalAlign: 'top' }}>
+                                                    <div style={{ fontWeight: 'bold' }}>{row.testName}</div>
+                                                    {row.method && <div style={{ fontSize:'10px', color: '#666' }}>Method: {row.method}</div>}
+                                                </td>
+                                                <td style={{ padding: '8px 5px', verticalAlign: 'top', fontWeight: 'bold' }}>
+                                                    {rIsDescriptive ? '' : row.resultValue}
+                                                </td>
+                                                <td style={{ padding: '8px 5px', verticalAlign: 'top' }}>
+                                                        {rIsDescriptive ? '' : displayRefRange}
+                                                </td>
+                                                <td style={{ padding: '8px 5px', verticalAlign: 'top' }}>
+                                                        {rIsDescriptive ? '' : (row.unit || rTestDef.unit)}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
 
-                            {/* Interpretation for THIS test */}
-                            {interpretation && (
+                            {/* Interpretations */}
+                            {/* We show interpretation for the main test if it exists, or maybe for subtests? 
+                                Current design shows logic for single test. 
+                                For groups, let's just show the group's interpretation if any, 
+                                but arguably sub-tests might have them. 
+                                Let's loop through rows and show interpretations if they exist. 
+                            */}
+                            {rowsToRender.map((row: any, rIdx) => {
+                                // Skip loop interpretation for single tests to avoid duplication
+                                if (!isGroup) return null;
+                                const interp = row.testId?.interpretation;
+                                if (!interp) return null;
+                                return (
+                                    <div key={rIdx} style={{ marginTop: '10px' }}>
+                                        <div style={{ fontWeight: 'bold', fontSize: '12px', borderBottom: '1px solid #ddd', marginBottom: '5px' }}>
+                                            INTERPRETATION: {row.testName}
+                                        </div>
+                                        <div dangerouslySetInnerHTML={{ __html: interp }} style={{ fontSize: '11px', lineHeight: '1.4' }} />
+                                    </div>
+                                );
+                            })}
+                            
+                            {/* Interpretation for the Top Level Result (if it wasn't in rowsToRender e.g. single test) */}
+                            {!isGroup && result.testId?.interpretation && (
                                 <div style={{ marginTop: '20px' }}>
                                     <div style={{ fontWeight: 'bold', fontSize: '13px', borderBottom: '1px solid #ddd', marginBottom: '10px' }}>INTERPRETATION</div>
-                                    <div dangerouslySetInnerHTML={{ __html: interpretation.text }} style={{ fontSize: '12px', lineHeight: '1.4' }} />
+                                    <div dangerouslySetInnerHTML={{ __html: result.testId.interpretation }} style={{ fontSize: '12px', lineHeight: '1.4' }} />
                                 </div>
                             )}
 
@@ -163,11 +239,10 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                                 </div>
                             )}
                             
-
                         </div>
 
-                        {/* Footer (Signatures + Page Number) - Flow naturally after content */}
-                        <div style={{ marginTop: '120px' }}>
+                        {/* Footer (Signatures + Page Number) */}
+                        <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                 <div style={{ textAlign: 'center', minWidth: '150px' }}>
                                     <div style={{ fontWeight: 'bold', borderTop: '1px solid #000', paddingTop: '5px' }}>Lab Technician</div>
