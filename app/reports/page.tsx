@@ -5,7 +5,7 @@ import styles from '../bills/page.module.css'; // Reusing bills styles for consi
 
 interface Report {
     _id: string;
-    reportId: string;
+    // reportId: string;
     date: string;
     patient: { firstName: string; lastName: string; phone: string; age: number; gender: string };
     doctor: { firstName: string; lastName: string; title: string };
@@ -181,7 +181,11 @@ export default function ReportsPage() {
                                         onClick={() => window.location.href = `/reports/${rpt._id}`}
                                     >
                                         <td style={{ padding: '20px 15px' }}>{formatDate(rpt.date)}</td>
-                                        <td style={{ padding: '20px 15px' }}>{rpt.reportId}</td>
+                                        <td style={{ padding: '20px 15px' }}>
+                                            <span style={{fontFamily:'monospace', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
+                                                #{rpt._id.substring(rpt._id.length - 6).toUpperCase()}
+                                            </span>
+                                        </td>
                                         <td style={{ padding: '20px 15px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></div>

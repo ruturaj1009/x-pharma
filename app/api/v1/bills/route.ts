@@ -67,36 +67,61 @@ export async function POST(request: Request) {
         });
 
         // Populate to return full data
-        await bill.populate(['patient', 'doctor', 'tests.test']);
+        await bill.populate([
+            'patient',
+            'doctor',
+            { path: 'tests.test', populate: { path: 'subTests' } }
+        ]);
 
         // --- Create Linked Report ---
         try {
             const Report = (await import('@/models/Report')).default;
-            const reportResults = bill.tests.map((t: any) => ({
-                testId: t.test._id,
-                testName: t.test.name,
-                status: 'PENDING'
-            }));
 
-            try {
-                await Report.create({
-                    bill: bill._id,
-                    patient: bill.patient._id,
-                    doctor: bill.doctor._id,
-                    results: reportResults,
-                    status: ReportStatus.INITIAL
-                });
-            } catch (initErr) {
-                console.warn("Report creation with INITIAL failed, retrying with PENDING:", initErr);
-                // Fallback for stale schema cache
-                await Report.create({
-                    bill: bill._id,
-                    patient: bill.patient._id,
-                    doctor: bill.doctor._id,
-                    results: reportResults,
-                    status: ReportStatus.PENDING
-                });
-            }
+            // Expand Group Tests
+            const reportResults: any[] = [];
+
+            bill.tests.forEach((t: any) => {
+                const testDef = t.test;
+                if (!testDef) return;
+
+                if (testDef.type === 'group' && testDef.subTests && testDef.subTests.length > 0) {
+                    // Group: Create nested object
+                    const groupResult = {
+                        testId: testDef._id,
+                        testName: testDef.name,
+                        type: 'group',
+                        status: 'PENDING',
+                        groupResults: testDef.subTests.map((sub: any) => ({
+                            testId: sub._id,
+                            testName: sub.name,
+                            type: sub.type || 'normal',
+                            status: 'PENDING',
+                            unit: sub.unit || '',
+                            referenceRange: ''
+                        }))
+                    };
+                    reportResults.push(groupResult);
+                } else {
+                    // Normal or Descriptive
+                    reportResults.push({
+                        testId: testDef._id,
+                        testName: testDef.name,
+                        type: testDef.type || 'normal',
+                        status: 'PENDING',
+                        unit: testDef.unit || '',
+                        referenceRange: ''
+                    });
+                }
+            });
+
+            await Report.create({
+                bill: bill._id,
+                patient: bill.patient._id,
+                doctor: bill.doctor._id,
+                results: reportResults,
+                status: ReportStatus.INITIAL
+            });
+
         } catch (reportError) {
             console.error("Failed to auto-create report:", reportError);
             // Return validation error in response for debugging

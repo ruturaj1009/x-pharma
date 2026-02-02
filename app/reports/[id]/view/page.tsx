@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useReactToPrint } from 'react-to-print';
@@ -14,7 +14,8 @@ interface TestResult {
         department?: { name: string };
         interpretation?: string;
         method?: string;
-        type?: string;
+    type?: string; 
+        groupResults?: TestResult[];
     };
     testName: string;
     resultValue: string;
@@ -23,6 +24,8 @@ interface TestResult {
     status: string;
     remarks?: string;
     method?: string;
+    type?: string;
+    groupResults?: TestResult[];
 }
 
 interface Report {
@@ -59,9 +62,9 @@ export default function PatientReportViewPage() {
         }
     }, [id]);
 
-    async function fetchReport(reportId: string) {
+    async function fetchReport(id: string) {
         try {
-            const res = await fetch(`/api/v1/reports/${reportId}`);
+            const res = await fetch(`/api/v1/reports/${id}`);
             const data = await res.json();
             if (res.ok) {
                 setReport(data.data);
@@ -121,6 +124,90 @@ export default function PatientReportViewPage() {
         display: 'inline-block'
     });
 
+
+
+    const renderRow = (result: TestResult, key: string, isNested = false) => {
+         // @ts-ignore
+         const testDef = typeof result.testId === 'object' ? result.testId : null;
+         
+         // Robust check for Group Type
+         // @ts-ignore
+         const isGroup = result.type === 'group' || (testDef?.type === 'group' && result.groupResults && result.groupResults.length > 0);
+ 
+         // Render Group Header
+         if (isGroup) {
+              return (
+                  <Fragment key={key}>
+                      <tr style={{ background: '#f8fafc' }}>
+                         <td colSpan={4} style={{ padding: '10px', fontWeight: 700, color: '#0f172a', borderBottom: '1px solid #e2e8f0' }}>
+                             {result.testName}
+                         </td>
+                      </tr>
+                      {/* @ts-ignore */}
+                      {result.groupResults?.map((sub, sIdx) => renderRow(sub, `${key}-${sIdx}`, true))}
+                  </Fragment>
+              );
+         }
+
+         const isDescriptive = testDef?.type === 'descriptive' || (result as any).type === 'descriptive';
+         
+         let displayRefRange = result.referenceRange;
+         if (!displayRefRange && testDef?.referenceRanges && testDef.referenceRanges.length > 0) {
+             displayRefRange = testDef.referenceRanges.map((r: any) => {
+                 let val = '';
+                 if (r.min && r.max) val = `${r.min} - ${r.max}`;
+                 else if (r.min) val = `> ${r.min}`;
+                 else if (r.max) val = `< ${r.max}`;
+                 return r.name ? `${r.name}: ${val}` : val;
+             }).filter(Boolean).join(', ');
+         }
+
+         return (
+             <tr key={key} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                 <td style={{ padding: '12px 8px', paddingLeft: isNested ? '30px' : '8px', fontSize: '14px', color: '#1e293b', fontWeight: 500 }}>
+                     {result.testName}
+                     {testDef?.interpretation && (
+                         <button
+                             onClick={() => setInterpretationModal({
+                                 title: result.testName,
+                                 text: testDef.interpretation || ''
+                             })}
+                             style={{
+                                 marginLeft: '8px',
+                                 width: '18px',
+                                 height: '18px',
+                                 borderRadius: '50%',
+                                 background: '#3b82f6',
+                                 color: 'white',
+                                 border: 'none',
+                                 fontSize: '11px',
+                                 fontWeight: 'bold',
+                                 cursor: 'pointer',
+                                 display: 'inline-flex',
+                                 alignItems: 'center',
+                                 justifyContent: 'center',
+                                 fontFamily: 'serif',
+                                 fontStyle: 'italic'
+                             }}
+                             title="View Interpretation"
+                         >
+                             i
+                         </button>
+                     )}
+                 </td>
+                 <td style={{ padding: '12px 8px', fontSize: '14px', color: '#1e293b', fontWeight: 600 }}>
+                     {isDescriptive ? '-' : result.resultValue}
+                 </td>
+                 <td style={{ padding: '12px 8px', fontSize: '14px', color: '#64748b' }}>
+                     {isDescriptive ? '-' : displayRefRange || '-'}
+                 </td>
+                 <td style={{ padding: '12px 8px', fontSize: '14px', color: '#64748b' }}>
+                     {isDescriptive ? '-' : result.unit || '-'}
+                 </td>
+             </tr>
+         );
+    };
+
     return (
         <div style={{ padding: '20px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
             {/* Header */}
@@ -176,66 +263,7 @@ export default function PatientReportViewPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {results.map((result, idx) => {
-                                    const isDescriptive = typeof result.testId === 'object' && result.testId.type === 'descriptive';
-                                    
-                                    // Format ref range fallback logic
-                                    let displayRefRange = result.referenceRange;
-                                    if (!displayRefRange && typeof result.testId === 'object' && result.testId.referenceRanges && result.testId.referenceRanges.length > 0) {
-                                        displayRefRange = result.testId.referenceRanges.map((r) => {
-                                            let val = '';
-                                            if (r.min && r.max) val = `${r.min} - ${r.max}`;
-                                            else if (r.min) val = `> ${r.min}`;
-                                            else if (r.max) val = `< ${r.max}`;
-                                            return r.name ? `${r.name}: ${val}` : val;
-                                        }).filter(Boolean).join(', ');
-                                    }
-
-                                    return (
-                                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                            <td style={{ padding: '12px 8px', fontSize: '14px', color: '#1e293b', fontWeight: 500 }}>
-                                                {result.testName}
-                                                {typeof result.testId === 'object' && result.testId.interpretation && (
-                                                    <button
-                                                        onClick={() => setInterpretationModal({
-                                                            title: result.testName,
-                                                            text: (result.testId as any).interpretation
-                                                        })}
-                                                        style={{
-                                                            marginLeft: '8px',
-                                                            width: '18px',
-                                                            height: '18px',
-                                                            borderRadius: '50%',
-                                                            background: '#3b82f6',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            fontSize: '11px',
-                                                            fontWeight: 'bold',
-                                                            cursor: 'pointer',
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            fontFamily: 'serif',
-                                                            fontStyle: 'italic'
-                                                        }}
-                                                        title="View Interpretation"
-                                                    >
-                                                        i
-                                                    </button>
-                                                )}
-                                            </td>
-                                            <td style={{ padding: '12px 8px', fontSize: '14px', color: '#1e293b', fontWeight: 600 }}>
-                                                {isDescriptive ? '-' : result.resultValue}
-                                            </td>
-                                            <td style={{ padding: '12px 8px', fontSize: '14px', color: '#64748b' }}>
-                                                {isDescriptive ? '-' : displayRefRange || '-'}
-                                            </td>
-                                            <td style={{ padding: '12px 8px', fontSize: '14px', color: '#64748b' }}>
-                                                {isDescriptive ? '-' : result.unit || '-'}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                {results.map((result, idx) => renderRow(result, String(idx)))}
                             </tbody>
                         </table>
                     </div>

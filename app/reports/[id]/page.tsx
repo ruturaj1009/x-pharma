@@ -26,6 +26,8 @@ interface TestResult {
     status: string;
     remarks?: string;
     method?: string;
+    type?: string;
+    groupResults?: TestResult[];
 }
 
 interface Report {
@@ -48,15 +50,15 @@ export default function ReportDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     
-    // Track which rows are in edit mode by index
-    const [editingRows, setEditingRows] = useState<Record<number, boolean>>({});
+    // Track which rows are in edit mode by index (string key for nested)
+    const [editingRows, setEditingRows] = useState<Record<string, boolean>>({});
     
     // Store temporary edits before saving
-    const [tempEdits, setTempEdits] = useState<Record<number, Partial<TestResult>>>({});
+    const [tempEdits, setTempEdits] = useState<Record<string, Partial<TestResult>>>({});
 
     // Interpretation Modal State
     const [showInterpModal, setShowInterpModal] = useState(false);
-    const [currentInterp, setCurrentInterp] = useState<{ index: number, text: string }>({ index: -1, text: '' });
+    const [currentInterp, setCurrentInterp] = useState<{ key: string, text: string }>({ key: '-1', text: '' });
 
     // Impression State
     const [showImpressionInput, setShowImpressionInput] = useState(false);
@@ -92,11 +94,12 @@ export default function ReportDetailsPage() {
         }
     }, [id]);
 
-    async function fetchReport(reportId: string) {
+    async function fetchReport(id: string) {
         try {
-            const res = await fetch(`/api/v1/reports/${reportId}`);
+            const res = await fetch(`/api/v1/reports/${id}`);
             const data = await res.json();
             if (res.ok) {
+                console.log('Report Data:', data.data);
                 setReport(data.data);
             } else {
                 toast.error('Failed to load report');
@@ -131,77 +134,108 @@ export default function ReportDetailsPage() {
         }
     };
 
-    const handleResultChange = (index: number, field: keyof TestResult, value: string) => {
+    const handleResultChange = (key: string, field: keyof TestResult, value: string) => {
         setTempEdits(prev => ({
             ...prev,
-            [index]: {
-                ...prev[index],
+            [key]: {
+                ...prev[key],
                 [field]: value
             }
         }));
     };
 
-    const toggleEdit = (index: number) => {
-        const isEditing = !editingRows[index];
-        setEditingRows(prev => ({ ...prev, [index]: isEditing }));
+    const toggleEdit = (key: string) => {
+        const isEditing = !editingRows[key];
+        setEditingRows(prev => ({ ...prev, [key]: isEditing }));
         
         if (isEditing && report) {
+            // Need to find the result based on key (e.g. "0" or "0-1")
+            const indices = key.split('-').map(Number);
+            let targetResult: any = report.results[indices[0]];
+            for (let i = 1; i < indices.length; i++) {
+                if (targetResult && targetResult.groupResults) {
+                    targetResult = targetResult.groupResults[indices[i]];
+                }
+            }
+
             // Initialize temp state with current values
-            setTempEdits(prev => ({
-                ...prev,
-                [index]: { ...report.results[index] }
-            }));
+            if (targetResult) {
+                setTempEdits(prev => ({
+                    ...prev,
+                    [key]: { ...targetResult }
+                }));
+            }
         } else {
             // Clear temp state for this row
             setTempEdits(prev => {
                 const newState = { ...prev };
-                delete newState[index];
+                delete newState[key];
                 return newState;
             });
         }
     };
 
-    const cancelEdit = (index: number) => {
-        setEditingRows(prev => ({ ...prev, [index]: false }));
+    const cancelEdit = (key: string) => {
+        setEditingRows(prev => ({ ...prev, [key]: false }));
         setTempEdits(prev => {
             const newState = { ...prev };
-            delete newState[index];
+            delete newState[key];
             return newState;
         });
     };
 
-    const openInterpModal = (index: number, defaultText: string) => {
-        const result = report?.results[index];
+    const openInterpModal = (key: string, defaultText: string) => {
+        if (!report) return;
+        
+        // Find result
+        const indices = key.split('-').map(Number);
+        let result: any = report.results[indices[0]];
+        for (let i = 1; i < indices.length; i++) {
+             if (result && result.groupResults) {
+                 result = result.groupResults[indices[i]];
+             }
+        }
+
         // For descriptive tests, we might want to use the default text (template) if remarks are empty
         const existing = result?.remarks || defaultText || '';
-        setCurrentInterp({ index, text: existing });
+        setCurrentInterp({ key, text: existing });
         setShowInterpModal(true);
     };
 
     const saveInterp = () => {
-        if (currentInterp.index > -1 && report) {
-            // Optimistic update
-            const newResults = [...report.results];
-            newResults[currentInterp.index].remarks = currentInterp.text;
+        if (currentInterp.key && report) {
+            // Optimistic update logic for nested structure is complex, 
+            // easier to skip purely local state set and rely on refetch or smart recursive update
+            // We will do a smart recursive update for local state to avoid flicker
+            const newResults = JSON.parse(JSON.stringify(report.results));
+            const indices = currentInterp.key.split('-').map(Number);
+            let target = newResults[indices[0]];
+            for (let i = 1; i < indices.length; i++) {
+                if (target && target.groupResults) target = target.groupResults[indices[i]];
+            }
+            if (target) target.remarks = currentInterp.text;
+
             setReport({ ...report, results: newResults });
             setShowInterpModal(false);
             
-            saveInterpretationResult(currentInterp.index, currentInterp.text);
+            saveUpdatedResults(newResults);
         }
     };
 
-    const saveInterpretationResult = async (index: number, text: string) => {
+    // Generalized Save Function that takes the FULL updated results array
+    const saveUpdatedResults = async (updatedResults: TestResult[]) => {
          if (!report) return;
          setSaving(true);
          try {
-             // We need to construct the full results array with the updated remark
-             const updatedResults = [...report.results];
-             updatedResults[index] = { ...updatedResults[index], remarks: text };
-
-             const cleanResults = updatedResults.map(r => ({
-                ...r,
-                testId: typeof r.testId === 'object' ? (r.testId as any)._id : r.testId
-            }));
+            // Recursive cleaner function
+            const clean = (results: any[]): any[] => {
+                return results.map(r => ({
+                    ...r,
+                    testId: typeof r.testId === 'object' ? (r.testId as any)._id : r.testId,
+                    groupResults: r.groupResults ? clean(r.groupResults) : undefined
+                }));
+            };
+            const cleanResults = clean(updatedResults);
 
             const res = await fetch(`/api/v1/reports/${report._id}`, {
                 method: 'PUT',
@@ -212,7 +246,7 @@ export default function ReportDetailsPage() {
             if (res.ok) {
                  const data = await res.json();
                  setReport(data.data);
-                 toast.success('Interpretation saved');
+                 toast.success('Saved successfully');
             } else {
                  toast.error('Failed to save');
             }
@@ -223,50 +257,35 @@ export default function ReportDetailsPage() {
          }
     };
 
-    const saveRow = async (index: number) => {
+    const saveRow = async (key: string) => {
         if (!report) return;
         
-        const edits = tempEdits[index];
+        const edits = tempEdits[key];
         if (!edits) {
-            toggleEdit(index); // Just close if no edits
+            toggleEdit(key); // Just close if no edits
             return;
         }
 
-        setSaving(true);
-        try {
-            // update local report copy with edits
-            const updatedResults = [...report.results];
-            updatedResults[index] = { ...updatedResults[index], ...edits };
-
-            const cleanResults = updatedResults.map(r => ({
-                ...r,
-                testId: typeof r.testId === 'object' ? (r.testId as any)._id : r.testId
-            }));
-
-            const res = await fetch(`/api/v1/reports/${report._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ results: cleanResults })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                setReport(data.data);
-                setEditingRows(prev => ({ ...prev, [index]: false }));
-                setTempEdits(prev => {
-                    const newState = { ...prev };
-                    delete newState[index];
-                    return newState;
-                });
-                toast.success('Result updated');
-            } else {
-                toast.error('Failed to save result');
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error('Error saving result');
-        } finally {
-            setSaving(false);
+        // Apply edits to local copy
+        const newResults = JSON.parse(JSON.stringify(report.results));
+        const indices = key.split('-').map(Number);
+        let target = newResults[indices[0]];
+        for (let i = 1; i < indices.length; i++) {
+             if (target && target.groupResults) target = target.groupResults[indices[i]];
         }
+        
+        if (target) {
+            Object.assign(target, edits);
+        }
+
+        setEditingRows(prev => ({ ...prev, [key]: false }));
+        setTempEdits(prev => {
+            const newState = { ...prev };
+            delete newState[key];
+            return newState;
+        });
+
+        await saveUpdatedResults(newResults);
     };
     
 
@@ -341,6 +360,170 @@ export default function ReportDetailsPage() {
             groupedResults[deptName].push({ result, originalIndex: idx });
         });
     }
+
+    // Helper to render a Row
+    const renderRow = (result: TestResult, key: string, isNested = false) => {
+        // @ts-ignore
+        const testDef = typeof result.testId === 'object' ? result.testId : null;
+        
+        // Robust check for Group Type
+        const isGroup = result.type === 'group' || (testDef?.type === 'group' && result.groupResults && result.groupResults.length > 0);
+
+        // Render Group Header
+        if (isGroup) {
+             return (
+                 <Fragment key={key}>
+                     <tr style={{ background: '#f8fafc' }}>
+                        <td colSpan={5} style={{ padding: '10px', fontWeight: 700, color: '#0f172a', borderBottom: '1px solid #e2e8f0' }}>
+                            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                <i className="fa fa-layer-group" style={{color:'#3b82f6'}}></i>
+                                {result.testName}
+                            </div>
+                        </td>
+                     </tr>
+                     {result.groupResults?.map((sub, sIdx) => renderRow(sub, `${key}-${sIdx}`, true))}
+                 </Fragment>
+             );
+        }
+
+        const isEditing = editingRows[key]; 
+        const editValues = tempEdits[key] || result;
+        const displayUnit = result.unit || testDef?.unit;
+        const method = result.method || testDef?.method;
+        const isDescriptive = testDef?.type === 'descriptive' || result.type === 'descriptive';
+        
+        let displayRefRange = result.referenceRange;
+        if (!displayRefRange && testDef?.referenceRanges && testDef.referenceRanges.length > 0) {
+            displayRefRange = formatReferenceRanges(testDef.referenceRanges);
+        }
+
+        return (
+            <tr key={key} style={{borderBottom: '1px solid #f1f5f9', background: 'white'}}>
+                <td style={{padding: '15px 5px', paddingLeft: isNested ? '30px' : '5px', verticalAlign: 'middle'}}>
+                    <div style={{fontWeight: 600, color: '#334155'}}>{result.testName}</div>
+                    {method && <div style={{fontSize:'11px', color:'#94a3b8', marginTop:'2px'}}>{method}</div>}
+                </td>
+                
+                <td style={{padding: '15px 5px'}}>
+                    {isDescriptive ? null : (
+                        isEditing ? (
+                            <input 
+                                value={editValues.resultValue || ''}
+                                onChange={(e) => handleResultChange(key, 'resultValue', e.target.value)} 
+                                placeholder="Enter Value"
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #3b82f6',
+                                    borderRadius: '4px',
+                                    outline: 'none',
+                                    fontWeight: 600
+                                }}
+                                autoFocus
+                            />
+                        ) : (
+                            <span style={{ fontWeight: 600, color: '#334155' }}>
+                                {result.resultValue || <span style={{color:'#cbd5e1', fontWeight: 400}}>Empty</span>}
+                            </span>
+                        )
+                    )}
+                </td>
+                
+                <td style={{padding: '15px 5px'}}>
+                    {!isDescriptive && (
+                        <div style={{ fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                            {displayRefRange}
+                        </div>
+                    )}
+                </td>
+                
+                <td style={{padding: '15px 5px'}}>
+                    {!isDescriptive && (
+                        <div style={{ fontSize: '13px', color: '#64748b' }}>
+                            {displayUnit}
+                        </div>
+                    )}
+                </td>
+                
+                <td style={{padding: '15px 5px'}}>
+                    <div style={{display: 'flex', gap: '8px', alignItems:'center'}}>
+                        {!isDescriptive && (
+                            isEditing ? (
+                                <>
+                                    <button 
+                                        onClick={() => saveRow(key)}
+                                        disabled={saving}
+                                        style={{
+                                            background: '#22c55e',
+                                            color: 'white',
+                                            padding: '6px 10px',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            fontSize: '11px',
+                                            opacity: saving ? 0.7 : 1
+                                        }}
+                                    >
+                                        SAVE
+                                    </button>
+                                    <button 
+                                        onClick={() => cancelEdit(key)}
+                                        style={{
+                                            background: '#ef4444',
+                                            color: 'white',
+                                            padding: '6px 10px',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            fontSize: '11px'
+                                        }}
+                                    >
+                                        CANCEL
+                                    </button>
+                                </>
+                            ) : (
+                                <button 
+                                    onClick={() => toggleEdit(key)}
+                                    style={{
+                                        background: '#e2e8f0',
+                                        color: '#475569',
+                                        padding: '6px 10px',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        fontSize: '11px'
+                                    }}
+                                >
+                                    EDIT
+                                </button>
+                            )
+                        )}
+
+                        {!isEditing && (
+                            <button 
+                                onClick={() => openInterpModal(key, testDef?.interpretation || '')}
+                                style={{
+                                    background: '#fff7ed', 
+                                    color: '#ea580c', 
+                                    padding: '6px 10px', 
+                                    border: '1px solid #ffedd5', 
+                                    borderRadius: '4px', 
+                                    fontWeight: 600, 
+                                    cursor: 'pointer', 
+                                    fontSize: '11px'
+                                }}
+                            >
+                                EDIT INTERP
+                            </button>
+                        )}
+                    </div>
+                </td>
+            </tr>
+        );
+    };
 
     if (loading) return <div style={{padding:'40px', textAlign:'center'}}>Loading...</div>;
     if (!report) return <div style={{padding:'40px', textAlign:'center'}}>Report not found</div>;
@@ -466,149 +649,7 @@ export default function ReportDetailsPage() {
                                     </tr>
 
                                     {/* Test Rows */}
-                                    {group.map(({ result, originalIndex }) => {
-                                        const isEditing = editingRows[originalIndex];
-                                        const editValues = tempEdits[originalIndex] || result;
-                                        
-                                        // Fallback Logic for Unit and Ref Range
-                                        // @ts-ignore
-                                        const testDef = typeof result.testId === 'object' ? result.testId : null;
-                                        const displayUnit = result.unit || testDef?.unit;
-                                        const method = result.method || testDef?.method;
-                                        const isDescriptive = testDef?.type === 'descriptive';
-                                        
-                                        let displayRefRange = result.referenceRange;
-                                        if (!displayRefRange && testDef?.referenceRanges && testDef.referenceRanges.length > 0) {
-                                            displayRefRange = formatReferenceRanges(testDef.referenceRanges);
-                                        }
-
-                                        return (
-                                            <tr key={originalIndex} style={{borderBottom: '1px solid #f1f5f9'}}>
-                                                <td style={{padding: '15px 5px', verticalAlign: 'middle'}}>
-                                                    <div style={{fontWeight: 600, color: '#334155'}}>{result.testName}</div>
-                                                    {method && <div style={{fontSize:'11px', color:'#94a3b8', marginTop:'2px'}}>{method}</div>}
-                                                </td>
-                                                
-                                                <td style={{padding: '15px 5px'}}>
-                                                    {isDescriptive ? null : (
-                                                        isEditing ? (
-                                                            <input 
-                                                                value={editValues.resultValue || ''}
-                                                                onChange={(e) => handleResultChange(originalIndex, 'resultValue', e.target.value)}
-                                                                placeholder="Enter Value"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    padding: '8px',
-                                                                    border: '1px solid #3b82f6',
-                                                                    borderRadius: '4px',
-                                                                    outline: 'none',
-                                                                    fontWeight: 600
-                                                                }}
-                                                                autoFocus
-                                                            />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: '#334155' }}>
-                                                                {result.resultValue || <span style={{color:'#cbd5e1', fontWeight: 400}}>Empty</span>}
-                                                            </span>
-                                                        )
-                                                    )}
-                                                </td>
-                                                
-                                                <td style={{padding: '15px 5px'}}>
-                                                    {!isDescriptive && (
-                                                        <div style={{ fontSize: '13px', color: '#334155', fontWeight: 600 }}>
-                                                            {displayRefRange}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                
-                                                <td style={{padding: '15px 5px'}}>
-                                                     {!isDescriptive && (
-                                                        <div style={{ fontSize: '13px', color: '#64748b' }}>
-                                                            {displayUnit}
-                                                        </div>
-                                                     )}
-                                                </td>
-                                                
-                                                <td style={{padding: '15px 5px'}}>
-                                                    <div style={{display: 'flex', gap: '8px', alignItems:'center'}}>
-                                                        {!isDescriptive && (
-                                                            isEditing ? (
-                                                                <>
-                                                                    <button 
-                                                                        onClick={() => saveRow(originalIndex)}
-                                                                        disabled={saving}
-                                                                        style={{
-                                                                            background: '#22c55e',
-                                                                            color: 'white',
-                                                                            padding: '6px 10px',
-                                                                            border: 'none',
-                                                                            borderRadius: '4px',
-                                                                            fontWeight: 600,
-                                                                            cursor: 'pointer',
-                                                                            fontSize: '11px',
-                                                                            opacity: saving ? 0.7 : 1
-                                                                        }}
-                                                                    >
-                                                                        SAVE
-                                                                    </button>
-                                                                    <button 
-                                                                        onClick={() => cancelEdit(originalIndex)}
-                                                                        style={{
-                                                                            background: '#ef4444',
-                                                                            color: 'white',
-                                                                            padding: '6px 10px',
-                                                                            border: 'none',
-                                                                            borderRadius: '4px',
-                                                                            fontWeight: 600,
-                                                                            cursor: 'pointer',
-                                                                            fontSize: '11px'
-                                                                        }}
-                                                                    >
-                                                                        CANCEL
-                                                                    </button>
-                                                                </>
-                                                            ) : (
-                                                                <button 
-                                                                    onClick={() => toggleEdit(originalIndex)}
-                                                                    style={{
-                                                                        background: '#e2e8f0',
-                                                                        color: '#475569',
-                                                                        padding: '6px 10px',
-                                                                        border: 'none',
-                                                                        borderRadius: '4px',
-                                                                        fontWeight: 600,
-                                                                        cursor: 'pointer',
-                                                                        fontSize: '11px'
-                                                                    }}
-                                                                >
-                                                                    EDIT
-                                                                </button>
-                                                            )
-                                                        )}
-
-                                                        {(testDef?.interpretation || isDescriptive) && !isEditing && (
-                                                            <button 
-                                                                onClick={() => openInterpModal(originalIndex, testDef?.interpretation || '')}
-                                                                style={{
-                                                                    background: '#fff7ed', 
-                                                                    color: '#ea580c', 
-                                                                    padding: '6px 10px', 
-                                                                    border: '1px solid #ffedd5', 
-                                                                    borderRadius: '4px', 
-                                                                    fontWeight: 600, 
-                                                                    cursor: 'pointer', 
-                                                                    fontSize: '11px'
-                                                                }}
-                                                            >
-                                                                EDIT INTERP
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                    {group.map(({ result, originalIndex }) => renderRow(result, String(originalIndex)))}
                                 </Fragment>
                             ))}
                         </tbody>

@@ -38,7 +38,7 @@ export async function GET(request: Request) {
             const userIds = users.map(u => u._id);
 
             query.$or = [
-                { reportId: { $regex: search, $options: 'i' } },
+                // { reportId: { $regex: search, $options: 'i' } }, // Legacy
                 { patient: { $in: userIds } }
             ];
         } catch (err) {

@@ -6,11 +6,13 @@ import { ReportStatus } from '@/enums/report';
 export interface ITestResult {
     testId: mongoose.Types.ObjectId;
     testName: string;
+    type: 'normal' | 'descriptive' | 'group';
     resultValue?: string;
     unit?: string;
     referenceRange?: string;
     status: 'PENDING' | 'COMPLETED';
     remarks?: string;
+    groupResults?: ITestResult[];
 }
 
 export interface IReport extends Document {

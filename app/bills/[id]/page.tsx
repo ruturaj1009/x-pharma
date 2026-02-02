@@ -33,7 +33,7 @@ interface BillDetail {
     createdAt: string;
     discountType: 'AMOUNT' | 'PERCENTAGE';
     reportStatus?: string;
-    reportId?: string;
+    // reportId?: string; // Retired
     reportMongoId?: string;
 }
 
@@ -70,6 +70,7 @@ export default function ViewBillPage() {
     const [collectAmount, setCollectAmount] = useState<number | ''>('');
     const [collectPaymentType, setCollectPaymentType] = useState('CASH');
     const [submittingDue, setSubmittingDue] = useState(false);
+    const [updatedLoading, setUpdatedLoading] = useState(false);
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
@@ -256,7 +257,34 @@ export default function ViewBillPage() {
                              <button className={`${styles.btn} ${styles.btnBlue}`}>VIEW REPORT</button>
                         </Link>
                     ) : (
-                        <button className={`${styles.btn} ${styles.btnBlue}`} disabled>VIEW REPORT (N/A)</button>
+                        <button 
+                            className={`${styles.btn} ${styles.btnBlue}`} 
+                            style={{background: '#db2777'}}
+                            onClick={async () => {
+                                if (updatedLoading) return; // Prevent double click
+                                setUpdatedLoading(true);
+                                try {
+                                    const res = await fetch('/api/v1/reports/create', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({ billId: bill._id })
+                                    });
+                                    if (res.ok) {
+                                        fetchBill(bill._id); // Reload
+                                    } else {
+                                        const err = await res.json();
+                                        alert('Failed to create report: ' + err.error);
+                                    }
+                                } catch (e) {
+                                    alert('Error creating report');
+                                } finally {
+                                    setUpdatedLoading(false);
+                                }
+                            }}
+                            disabled={updatedLoading}
+                        >
+                            {updatedLoading ? 'CREATING...' : 'CREATE REPORT'}
+                        </button>
                     )}
 
                     <Link href={`/bills/${bill._id}/add-test`} style={{display: 'contents'}}>
