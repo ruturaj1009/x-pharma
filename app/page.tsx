@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Script from 'next/script';
 import styles from "./dashboard.module.css";
 
 export default function Home() {
@@ -127,10 +128,11 @@ export default function Home() {
 
       </section>
 
-      <div className={styles.liveChat} onClick={() => alert('Live Chat Opened')}>
-        <span>Live Chat - Ask Help!</span>
-        <span className={styles.liveChatClose}>✕</span>
-      </div>
+
+      <Script 
+        src="https://www.noupe.com/embed/019c24e615be76c4aaa9459c86b9b02887b3.js" 
+        strategy="lazyOnload" 
+      />
     </>
   );
 }
