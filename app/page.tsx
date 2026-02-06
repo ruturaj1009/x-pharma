@@ -1,8 +1,13 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
+import Script from 'next/script';
+import SettingsModal from './components/SettingsModal';
 import styles from "./dashboard.module.css";
 
 export default function Home() {
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   return (
     <>
       <section className={styles.hero}>
@@ -63,10 +68,38 @@ export default function Home() {
         </Link>
 
         <Link href="#" className={styles.card}>
+            <div className={`${styles.iconWrapper} ${styles.iconPurple}`}>
+                <i className="fa fa-list"></i>
+            </div>
+            <span className={styles.label}>Test Rate List</span>
+        </Link>
+
+        <Link href="#" className={styles.card}>
             <div className={`${styles.iconWrapper} ${styles.iconGreen}`}>
                 <i className="fa fa-chart-line"></i>
             </div>
-            <span className={styles.label}>Business Analysis (New)</span>
+            <span className={styles.label}>Business Analysis</span>
+        </Link>
+
+        <button onClick={() => setShowSettingsModal(true)} className={styles.card} style={{border:'none', background:'transparent', cursor:'pointer'}}>
+            <div className={`${styles.iconWrapper} ${styles.iconBlue}`}>
+                <i className="fa fa-gear"></i>
+            </div>
+            <span className={styles.label}>Settings</span>
+        </button>
+
+        <Link href="#" className={styles.card}>
+            <div className={`${styles.iconWrapper} ${styles.iconRed}`}>
+                <i className="fa fa-shield-halved"></i>
+            </div>
+            <span className={styles.label}>Admin</span>
+        </Link>
+
+        <Link href="#" className={styles.card}>
+            <div className={`${styles.iconWrapper} ${styles.iconOrange}`}>
+                <i className="fa fa-indian-rupee-sign"></i>
+            </div>
+            <span className={styles.label}>Recharges</span>
         </Link>
 
          <Link href="#" className={styles.card}>
@@ -76,7 +109,6 @@ export default function Home() {
             <span className={styles.label}>Help Videos</span>
         </Link>
 
-        {/* Second Row Logic */}
         <Link href="#" className={styles.card}>
             <div className={`${styles.iconWrapper} ${styles.iconOrange}`}>
                 <i className="fa fa-wallet"></i>
@@ -85,25 +117,27 @@ export default function Home() {
         </Link>
 
         <Link href="#" className={styles.card}>
-            <div className={`${styles.iconWrapper} ${styles.iconBlue}`}> {/* Icon looks like cursor/question */}
+            <div className={`${styles.iconWrapper} ${styles.iconBlue}`}>
                 <i className="fa fa-arrow-pointer"></i>
             </div>
             <span className={styles.label}>Product Tour</span>
         </Link>
 
         <Link href="#" className={styles.card}>
-            <div className={`${styles.iconWrapper} ${styles.iconGreen}`}> {/* Icon looks like thumbs up */}
+            <div className={`${styles.iconWrapper} ${styles.iconGreen}`}>
                 <i className="fa fa-thumbs-up"></i>
             </div>
-            <span className={styles.label}>Feedback (NEW)</span>
+            <span className={styles.label}>Feedback</span>
         </Link>
 
       </section>
 
-      <div className={styles.liveChat} onClick={() => alert('Live Chat Opened')}>
-        <span>Live Chat - Ask Help!</span>
-        <span className={styles.liveChatClose}>✕</span>
-      </div>
+      <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+
+      <Script 
+        src="https://www.noupe.com/embed/019c24e615be76c4aaa9459c86b9b02887b3.js" 
+        strategy="lazyOnload" 
+      />
     </>
   );
 }

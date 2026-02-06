@@ -3,6 +3,7 @@ import { useState, useEffect, use, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { api } from '@/lib/api-client';
 import RichTextEditor from '../../../components/RichTextEditor';
 
 interface Department {
@@ -46,7 +47,6 @@ function CreateTestContent({ params }: { params: Promise<{ departmentId: string 
     const [interpretation, setInterpretation] = useState('');
 
 
-
     useEffect(() => {
         // Optional: Fetch department name for display
         fetchDepartmentName();
@@ -54,8 +54,7 @@ function CreateTestContent({ params }: { params: Promise<{ departmentId: string 
 
     const fetchDepartmentName = async () => {
         try {
-            const res = await fetch('/api/v1/departments');
-            const data = await res.json();
+            const data = await api.get('/api/v1/departments');
             if(data.success) {
                 const d = data.data.find((dept: any) => dept._id === departmentId);
                 if(d) setDepartmentName(d.name);
@@ -117,12 +116,7 @@ function CreateTestContent({ params }: { params: Promise<{ departmentId: string 
             } 
             // Group type has no extra fields on creation anymore, subtests added in View page
 
-            const res = await fetch('/api/v1/tests', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
+            const data = await api.post('/api/v1/tests', payload);
 
             if (data.success) {
                 toast.success('Test created successfully!');
@@ -411,13 +405,14 @@ function CreateTestContent({ params }: { params: Promise<{ departmentId: string 
                     type="button"
                     style={{
                         padding: '12px 24px',
-                        background: '#f1f5f9',
-                        color: 'white',
-                        border: 'none',
+                        background: '#e2e8f0',
+                        color: '#0f172a',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '8px',
                         fontSize: '16px',
                         fontWeight: 600,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                     }}
                 >
                     Cancel

@@ -7,6 +7,7 @@ import { useReactToPrint } from 'react-to-print';
 import { ReportPrint } from '@/app/components/ReportPrint';
 import { ReportStatus } from '@/enums/report';
 import RichTextEditor from '@/app/components/RichTextEditor';
+import { api } from '@/lib/api-client';
 
 interface TestResult {
     testId: string | { 
@@ -67,6 +68,7 @@ export default function ReportDetailsPage() {
     // Print Settings State
     const [showPrintSettings, setShowPrintSettings] = useState(false);
     const [watermarkText, setWatermarkText] = useState('Health Amaze Demo Account');
+    const [printSettings, setPrintSettings] = useState<any>(null);
 
     // Print Handling
     const printRef = useRef<HTMLDivElement>(null);
@@ -74,8 +76,6 @@ export default function ReportDetailsPage() {
         contentRef: printRef,
         documentTitle: `Report_${report?.patient?.firstName || 'Patient'}`,
     });
-
-    // Status Options & Mapping
 
     // Status Options & Mapping
     const statusOptions = ['Initial', 'In Process', 'Completed', 'Verified & Signed', 'Printed', 'Delivered'];
@@ -91,14 +91,25 @@ export default function ReportDetailsPage() {
     useEffect(() => {
         if (id) {
             fetchReport(id);
+            fetchPrintSettings();
         }
     }, [id]);
 
+    async function fetchPrintSettings() {
+        try {
+            const data = await api.get('/api/v1/settings/print?type=report');
+            if (data.status === 200) {
+                setPrintSettings(data.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch print settings:', err);
+        }
+    }
+
     async function fetchReport(id: string) {
         try {
-            const res = await fetch(`/api/v1/reports/${id}`);
-            const data = await res.json();
-            if (res.ok) {
+            const data = await api.get(`/api/v1/reports/${id}`);
+            if (data.status === 200) {
                 console.log('Report Data:', data.data);
                 setReport(data.data);
             } else {
@@ -115,13 +126,9 @@ export default function ReportDetailsPage() {
         if (!report) return;
         setSaving(true);
         try {
-            const res = await fetch(`/api/v1/reports/${report._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
-            });
-            const data = await res.json();
-            if (res.ok) {
+            const data = await api.put(`/api/v1/reports/${report._id}`, { status: newStatus });
+            
+            if (data.status === 200) {
                 setReport(data.data);
                 toast.success(`Status updated to ${newStatus}`);
             } else {
@@ -237,14 +244,9 @@ export default function ReportDetailsPage() {
             };
             const cleanResults = clean(updatedResults);
 
-            const res = await fetch(`/api/v1/reports/${report._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ results: cleanResults })
-            });
+            const data = await api.put(`/api/v1/reports/${report._id}`, { results: cleanResults });
 
-            if (res.ok) {
-                 const data = await res.json();
+            if (data.status === 200) {
                  setReport(data.data);
                  toast.success('Saved successfully');
             } else {
@@ -288,18 +290,12 @@ export default function ReportDetailsPage() {
         await saveUpdatedResults(newResults);
     };
     
-
-    
     const handleSaveImpression = async () => {
         if (!report) return;
         try {
-             const res = await fetch(`/api/v1/reports/${report._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ impression: tempImpression })
-            });
+            const data = await api.put(`/api/v1/reports/${report._id}`, { impression: tempImpression });
 
-            if (res.ok) {
+            if (data.status === 200) {
                  // Update local state
                  setReport(prev => prev ? ({ ...prev, impression: tempImpression }) : null);
                  setShowImpressionInput(false);
@@ -323,8 +319,6 @@ export default function ReportDetailsPage() {
         setShowImpressionInput(true);
     };
 
-
-    
     // Reference Range Helper
     const formatReferenceRanges = (ranges: any[]) => {
         if (!ranges || ranges.length === 0) return '';
@@ -663,7 +657,7 @@ export default function ReportDetailsPage() {
                     {!showImpressionInput && report.impression && (
                         <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
                             <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '5px' }}>IMPRESSION:</div>
-                            <div style={{ fontSize: '14px', color: '#334155', whiteSpace: 'pre-wrap' }}>{report.impression}</div>
+                            <div dangerouslySetInnerHTML={{ __html: report.impression }} style={{ fontSize: '14px', color: '#334155' }} />
                         </div>
                     )}
 
@@ -798,29 +792,20 @@ export default function ReportDetailsPage() {
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
                     <div style={{ background: 'white', padding: '24px', borderRadius: '8px', width: '400px' }}>
                         <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 700 }}>Print Settings</h3>
-                        
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Watermark Text</label>
-                            <input 
-                                type="text" 
-                                value={watermarkText} 
-                                onChange={(e) => setWatermarkText(e.target.value)}
-                                style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
-                            />
-                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>Clear text to remove watermark</div>
+                        {/* Placeholder Content */}
+                        <div style={{marginBottom: '20px', color: '#64748b'}}>
+                            Settings configuration placeholder.
                         </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                            <button onClick={() => setShowPrintSettings(false)} style={{ padding: '8px 16px', background: '#e2e8f0', border: 'none', borderRadius: '4px', fontWeight: 600, cursor: 'pointer' }}>CLOSE</button>
-                            <button onClick={() => { setShowPrintSettings(false); handlePrint(); }} style={{ padding: '8px 16px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 600, cursor: 'pointer' }}>SAVE & PRINT</button>
-                        </div>
+                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                             <button onClick={() => setShowPrintSettings(false)} style={{ padding: '8px 16px', background: '#e2e8f0', border: 'none', borderRadius: '4px', fontWeight: 600, cursor: 'pointer' }}>CLOSE</button>
+                         </div>
                     </div>
                 </div>
             )}
 
             {/* Hidden Print Component */}
             <div style={{ display: 'none' }}>
-                {report && <ReportPrint ref={printRef} report={{...report, watermarkText}} />}
+                {report && <ReportPrint ref={printRef} report={{...report, watermarkText}} printSettings={printSettings} />}
             </div>
         </div>
     );

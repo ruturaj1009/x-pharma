@@ -4,9 +4,19 @@ import { QRCodeSVG } from 'qrcode.react';
 
 interface ReportPrintProps {
     report: any; // Using any for flexibility with populated fields, or strict IReport
+    printSettings?: {
+        headerType?: 'none' | 'text' | 'image';
+        labName?: string;
+        labAddress?: string;
+        headerImageUrl?: string;
+        headerMargin?: number;
+        fontSize?: number;
+        showWatermark?: boolean;
+        watermarkText?: string;
+    };
 }
 
-export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({ report }, ref) => {
+export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({ report, printSettings }, ref) => {
     
     // Helper to format date
     const formatDate = (dateStr: string) => {
@@ -32,6 +42,9 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                 {`
                 @page { size: A4; margin: 0; }
                 body { margin: 0; }
+                .rte-content table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 5px; }
+                .rte-content th, .rte-content td { border: 1px solid #ccc; padding: 4px; text-align: left; }
+                .rte-content th { background-color: #f1f1f1; font-weight: bold; }
                 `}
             </style>
             {allResults.map((result, index) => {
@@ -72,16 +85,44 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                         minHeight: '296mm' // Reduced slightly to prevent spillover
                     }}>
                         {/* Watermark */}
-                        {report.watermarkText !== false && (
+                        {(printSettings?.showWatermark ?? (report.watermarkText !== false)) && (
                             <div style={{
                                 position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-45deg)',
-                                fontSize: '60px', color: 'rgba(0, 0, 0, 0.05)', pointerEvents: 'none', whiteSpace: 'nowrap', fontWeight: 'bold', zIndex: 0
+                                fontSize: '60px', color: 'rgba(0, 0, 0, 0.05)', pointerEvents: 'none', whiteSpace: 'nowrap', fontWeight: 'bold', zIndex: 0,
+                                textAlign: 'center', width: '100%'
                             }}>
-                                {report.watermarkText || 'IzyHealth By Rutu Dev Labs'}
+                                {printSettings?.watermarkText || report.watermarkText || 'IzyHealth By Rutu Dev Labs'}
                             </div>
                         )}
 
-                        {/* Header (Repeated on every page) */}
+                        {/* Header (Repeated on every page) - Conditional based on settings */}
+                        {(!printSettings || printSettings.headerType === 'text') && (
+                            <div style={{ textAlign: 'center', marginBottom: `${printSettings?.headerMargin || 10}px` }}>
+                                <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>{printSettings?.labName || 'Raj Labs'}</h1>
+                                <p style={{ fontSize: '14px', margin: '5px 0' }}>{printSettings?.labAddress || 'Balasore'}</p>
+                                <div style={{ borderBottom: '1px solid #ccc', margin: '15px 0' }}></div>
+                            </div>
+                        )}
+
+                        {printSettings?.headerType === 'image' && printSettings.headerImageUrl && (
+                            <div style={{ marginBottom: `${printSettings.headerMargin || 10}px` }}>
+                                <div style={{ overflow: 'hidden' }}>
+                                    <img 
+                                        src={printSettings.headerImageUrl} 
+                                        alt="Header" 
+                                        style={{ 
+                                            width: '100%', 
+                                            height: '100px', 
+                                            objectFit: 'cover',
+                                            display: 'block'
+                                        }} 
+                                    />
+                                </div>
+                                <div style={{ borderBottom: '1px solid #ccc', margin: '15px 0' }}></div>
+                            </div>
+                        )}
+
+                        {/* Patient Meta Bar */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #000', paddingBottom: '10px' }}>
                             <div style={{ flex: 2 }}>
                                 <div style={{ display: 'flex', marginBottom: '4px' }}>
@@ -211,10 +252,10 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                             {rowsToRender.map((row: any, rIdx) => {
                                 // Skip loop interpretation for single tests to avoid duplication
                                 if (!isGroup) return null;
-                                const interp = row.testId?.interpretation;
+                                const interp = row.remarks || row.testId?.interpretation;
                                 if (!interp) return null;
                                 return (
-                                    <div key={rIdx} style={{ marginTop: '10px' }}>
+                                    <div key={rIdx} style={{ marginTop: '10px' }} className="rte-content">
                                         <div style={{ fontWeight: 'bold', fontSize: '12px', borderBottom: '1px solid #ddd', marginBottom: '5px' }}>
                                             INTERPRETATION: {row.testName}
                                         </div>
@@ -224,10 +265,10 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                             })}
                             
                             {/* Interpretation for the Top Level Result (if it wasn't in rowsToRender e.g. single test) */}
-                            {!isGroup && result.testId?.interpretation && (
-                                <div style={{ marginTop: '20px' }}>
+                            {!isGroup && (result.remarks || result.testId?.interpretation) && (
+                                <div style={{ marginTop: '20px' }} className="rte-content">
                                     <div style={{ fontWeight: 'bold', fontSize: '13px', borderBottom: '1px solid #ddd', marginBottom: '10px' }}>INTERPRETATION</div>
-                                    <div dangerouslySetInnerHTML={{ __html: result.testId.interpretation }} style={{ fontSize: '12px', lineHeight: '1.4' }} />
+                                    <div dangerouslySetInnerHTML={{ __html: result.remarks || result.testId?.interpretation }} style={{ fontSize: '12px', lineHeight: '1.4' }} />
                                 </div>
                             )}
 
@@ -235,7 +276,7 @@ export const ReportPrint = React.forwardRef<HTMLDivElement, ReportPrintProps>(({
                              {report.impression && (
                                 <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #eee', borderRadius: '4px' }}>
                                     <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}>IMPRESSION:</div>
-                                    <div style={{ whiteSpace: 'pre-wrap' }}>{report.impression}</div>
+                                    <div dangerouslySetInnerHTML={{ __html: report.impression }} style={{ fontSize: '12px', lineHeight: '1.4' }} />
                                 </div>
                             )}
                             

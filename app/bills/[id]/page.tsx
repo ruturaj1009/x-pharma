@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useReactToPrint } from 'react-to-print';
+import toast from 'react-hot-toast';
+import { api } from '@/lib/api-client';
 import { BillReceipt } from '../../components/BillReceipt';
 import { BarcodeStickerSheet } from '../../components/BarcodeStickerSheet';
 import styles from './page.module.css';
@@ -71,6 +73,7 @@ export default function ViewBillPage() {
     const [collectPaymentType, setCollectPaymentType] = useState('CASH');
     const [submittingDue, setSubmittingDue] = useState(false);
     const [updatedLoading, setUpdatedLoading] = useState(false);
+    const [printSettings, setPrintSettings] = useState<any>(null);
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
@@ -86,13 +89,24 @@ export default function ViewBillPage() {
     useEffect(() => {
         if (params.id) {
             fetchBill(params.id as string);
+            fetchPrintSettings();
         }
     }, [params.id]);
 
+    async function fetchPrintSettings() {
+        try {
+            const data = await api.get('/api/v1/settings/print?type=bill');
+            if (data.status === 200) {
+                setPrintSettings(data.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch print settings:', err);
+        }
+    }
+
     async function fetchBill(id: string) {
         try {
-            const res = await fetch(`/api/v1/bills/${id}`);
-            const data = await res.json();
+            const data = await api.get(`/api/v1/bills/${id}`);
             if (data.status === 200) {
                 setBill(data.data);
             }
@@ -107,21 +121,17 @@ export default function ViewBillPage() {
         if (!bill || !collectAmount) return;
 
         if (Number(collectAmount) > bill.dueAmount) {
-            alert('Cannot collect more than the due amount');
+            toast.error('Cannot collect more than the due amount');
             return;
         }
 
         setSubmittingDue(true);
         try {
-            const res = await fetch(`/api/v1/bills/${bill._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    collectDueAmount: Number(collectAmount),
-                    duePaymentType: collectPaymentType
-                })
+            const data = await api.put(`/api/v1/bills/${bill._id}`, {
+                collectDueAmount: Number(collectAmount),
+                duePaymentType: collectPaymentType
             });
-            const data = await res.json();
+            
             if (data.status === 200) {
                 setBill(data.data); // Update with new bill data (status PAID etc)
                 setShowCollectDueModal(false);
@@ -264,19 +274,15 @@ export default function ViewBillPage() {
                                 if (updatedLoading) return; // Prevent double click
                                 setUpdatedLoading(true);
                                 try {
-                                    const res = await fetch('/api/v1/reports/create', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: JSON.stringify({ billId: bill._id })
-                                    });
-                                    if (res.ok) {
-                                        fetchBill(bill._id); // Reload
+                                    const res = await api.post('/api/v1/reports/create', { billId: bill._id });
+                                    if (res.status === 201 || res.status === 200) {
+                                         toast.success('Report created successfully');
+                                         fetchBill(bill._id); // Reload
                                     } else {
-                                        const err = await res.json();
-                                        alert('Failed to create report: ' + err.error);
+                                        toast.error('Failed to create report: ' + res.error);
                                     }
-                                } catch (e) {
-                                    alert('Error creating report');
+                                } catch (e: any) {
+                                    toast.error(e?.message || 'Error creating report');
                                 } finally {
                                     setUpdatedLoading(false);
                                 }
@@ -304,9 +310,15 @@ export default function ViewBillPage() {
                         </button>
                     )}
 
-                    <button className={`${styles.btn} ${styles.btnBlue}`}>PRINT SETTINGS</button>
-                    <button className={`${styles.btn} ${styles.btnGreen}`}>SEND WHATSAPP</button>
-                    <button className={`${styles.btn} ${styles.btnBlue}`}>MORE</button>
+                    <Link href="/settings/bill-print" style={{display: 'contents'}}>
+                        <button className={`${styles.btn} ${styles.btnBlue}`}>PRINT SETTINGS</button>
+                    </Link>
+                    <button className={`${styles.btn} ${styles.btnGreen}`} disabled style={{opacity: 0.6, cursor: 'not-allowed'}}>
+                        SEND WHATSAPP <i className="fa fa-lock" style={{marginLeft: '5px'}}></i>
+                    </button>
+                    <button className={`${styles.btn} ${styles.btnBlue}`} disabled style={{opacity: 0.6, cursor: 'not-allowed'}}>
+                        MORE <i className="fa fa-lock" style={{marginLeft: '5px'}}></i>
+                    </button>
                 </div>
 
             </div>
@@ -317,7 +329,7 @@ export default function ViewBillPage() {
 
             {/* Hidden Receipt Component for Printing */}
             <div style={{ display: 'none' }}>
-                {bill && <BillReceipt ref={componentRef} bill={bill} />}
+                {bill && <BillReceipt ref={componentRef} bill={bill} printSettings={printSettings} />}
                 {bill && (
                     <BarcodeStickerSheet 
                         ref={barcodeRef}

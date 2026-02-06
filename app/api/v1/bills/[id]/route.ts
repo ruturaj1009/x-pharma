@@ -5,6 +5,7 @@ import Bill from '@/models/Bill';
 import '@/models/User';
 import '@/models/Test';
 import { ApiResponse } from '@/types/api';
+import { authorize } from '@/lib/auth';
 
 export async function GET(
     request: Request,
@@ -15,10 +16,16 @@ export async function GET(
     const id = params.id;
 
     try {
-        const bill = await Bill.findById(id)
+        const user = await authorize(request);
+        const bill = await Bill.findOne({ _id: id, orgid: user.orgid })
             .populate('patient')
             .populate('doctor')
             .populate('tests.test');
+
+        console.log('API FETCH BILL:', id);
+        console.log('PATIENT:', bill?.patient);
+        console.log('DOCTOR:', bill?.doctor);
+        console.log('TESTS:', JSON.stringify(bill?.tests));
 
         if (!bill) {
             return NextResponse.json({ status: 404, error: 'Bill not found' }, { status: 404 });
@@ -26,7 +33,7 @@ export async function GET(
 
         // Fetch associated report status
         const Report = (await import('@/models/Report')).default;
-        const report = await Report.findOne({ bill: id }).select('status reportId _id');
+        const report = await Report.findOne({ bill: id, orgid: user.orgid }).select('status reportId _id');
 
         const billData = bill.toObject();
         billData.reportStatus = report ? report.status : 'INITIAL';
@@ -38,11 +45,12 @@ export async function GET(
             data: billData
         });
 
-    } catch (error) {
+    } catch (error: any) {
+        const status = error.message.startsWith('Unauthorized') ? 401 : (error.message.startsWith('Forbidden') ? 403 : 500);
         return NextResponse.json({
-            status: 500,
+            status: status,
             error: (error as Error).message
-        }, { status: 500 });
+        }, { status: status });
     }
 }
 
@@ -55,6 +63,7 @@ export async function PUT(
     const { id } = params;
 
     try {
+        await authorize(request);
         const body = await request.json();
         // Extract fields we allow updating
         // We expect: tests, totalAmount, discountAmount, paidAmount, dueAmount, paymentType, discountType, status
@@ -119,7 +128,7 @@ export async function PUT(
                 status: finalStatus
             },
             { new: true }
-        ).populate('tests.test');
+        ).populate('patient').populate('doctor').populate('tests.test');
 
         if (!updatedBill) {
             return NextResponse.json({ status: 404, error: 'Bill not found' }, { status: 404 });
