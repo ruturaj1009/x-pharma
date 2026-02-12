@@ -202,7 +202,6 @@ export default function AddTestPage() {
 
     return (
         <div style={{ padding: '20px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
-            <Toaster position="top-right" />
             
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>

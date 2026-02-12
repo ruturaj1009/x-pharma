@@ -537,7 +537,6 @@ export default function ReportDetailsPage() {
 
     return (
         <div style={{ padding: '20px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
-            <Toaster position="top-right" />
             
             {/* Main Card */}
             <div style={{ background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>

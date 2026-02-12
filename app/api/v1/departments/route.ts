@@ -18,7 +18,9 @@ export async function GET(req: Request) {
     await connectDB();
     try {
         const user = await authorize(req);
-        const departments = await Department.find({ orgid: user.orgid }).sort({ createdAt: -1 });
+        const departments = await Department.find({ orgid: user.orgid })
+            .select('name description icon createdAt')
+            .sort({ createdAt: -1 });
         return NextResponse.json({ success: true, data: departments });
     } catch (error: any) {
         const status = error.message.startsWith('Unauthorized') ? 401 : (error.message.startsWith('Forbidden') ? 403 : 500);
@@ -31,7 +33,6 @@ export async function POST(req: NextRequest) {
     try {
         const user = await authorize(req);
         const body = await req.json();
-        console.log('CREATE Department Body:', body);
         const { name, description, icon } = body;
 
         if (!name) {

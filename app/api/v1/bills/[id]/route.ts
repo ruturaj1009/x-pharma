@@ -58,7 +58,7 @@ export async function PUT(
     const { id } = params;
 
     try {
-        await authorize(request);
+        const user = await authorize(request);
         const body = await request.json();
         // Extract fields we allow updating
         // We expect: tests, totalAmount, discountAmount, paidAmount, dueAmount, paymentType, discountType, status
@@ -91,7 +91,7 @@ export async function PUT(
             // So we need to fetch current bill to update.
 
             if (paidAmount === undefined) {
-                const currentBill = await Bill.findById(id);
+                const currentBill = await Bill.findOne({ _id: id, orgid: user.orgid });
                 if (!currentBill) return NextResponse.json({ status: 404, error: 'Bill not found' }, { status: 404 });
 
                 finalPaidAmount = currentBill.paidAmount + Number(collectDueAmount);
@@ -109,8 +109,8 @@ export async function PUT(
         }
 
         // 1. Update Bill
-        const updatedBill = await Bill.findByIdAndUpdate(
-            id,
+        const updatedBill = await Bill.findOneAndUpdate(
+            { _id: id, orgid: user.orgid },
             {
                 tests,
                 totalAmount,
@@ -123,7 +123,7 @@ export async function PUT(
                 status: finalStatus
             },
             { new: true }
-        ).populate('patient').populate('doctor').populate('tests.test');
+        ).populate('patient').populate('doctor').populate('tests.test').select('-__v -orgid');
 
         if (!updatedBill) {
             return NextResponse.json({ status: 404, error: 'Bill not found' }, { status: 404 });
@@ -131,7 +131,7 @@ export async function PUT(
 
         // 2. Sync Report
         const Report = (await import('@/models/Report')).default;
-        const report = await Report.findOne({ bill: id });
+        const report = await Report.findOne({ bill: id, orgid: user.orgid });
 
         if (report) {
             let reportModified = false;
@@ -139,8 +139,6 @@ export async function PUT(
 
             // Check for new tests
             updatedBill.tests.forEach((t: any) => {
-                // t.test is populated object due to .populate('tests.test') above
-                // Check safety if population failed?
                 if (t.test && t.test._id) {
                     const tId = t.test._id.toString();
                     if (!existingTestIds.includes(tId)) {
@@ -174,11 +172,12 @@ export async function PUT(
             message: 'Bill updated and Report synced'
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Bill PUT Error:", error);
+        const status = error.message.startsWith('Unauthorized') ? 401 : (error.message.startsWith('Forbidden') ? 403 : 500);
         return NextResponse.json({
-            status: 500,
+            status: status,
             error: (error as Error).message
-        }, { status: 500 });
+        }, { status: status });
     }
 }

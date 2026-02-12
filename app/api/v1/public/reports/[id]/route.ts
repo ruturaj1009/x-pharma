@@ -14,7 +14,7 @@ export async function GET(
 
     try {
         const report = await Report.findById(id)
-            .populate('patient', 'firstName lastName phone age gender')
+            .populate('patient', 'firstName lastName mobile age gender')
             .populate('doctor', 'firstName lastName title')
             .populate('bill')
             .populate({
@@ -28,7 +28,8 @@ export async function GET(
             .populate({
                 path: 'results.groupResults.testId',
                 select: 'name type department unit referenceRanges interpretation method'
-            });
+            })
+            .select('-__v -orgid');
 
         if (!report) {
             return NextResponse.json({ status: 404, error: 'Report not found' }, { status: 404 });

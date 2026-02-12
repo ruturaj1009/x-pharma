@@ -50,6 +50,7 @@ export async function GET(request: Request) {
 
         const total = await User.countDocuments(query);
         const users = await User.find(query)
+            .select('firstName lastName gender age mobile email role createdAt')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);

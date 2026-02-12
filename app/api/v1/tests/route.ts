@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     await dbConnect();
-    console.log("Department Model Registered:", !!Department);
     try {
         const user = await authorize(req);
 
@@ -71,7 +70,10 @@ export async function GET(req: NextRequest) {
             query.name = { $regex: search, $options: 'i' };
         }
 
-        const tests = await Test.find(query).sort({ createdAt: -1 }).populate('department');
+        const tests = await Test.find(query)
+            .select('name type shortCode price department createdAt')
+            .sort({ createdAt: -1 })
+            .populate('department', 'name');
         return NextResponse.json({ success: true, data: tests });
     } catch (error: any) {
         const status = error.message.startsWith('Unauthorized') ? 401 : (error.message.startsWith('Forbidden') ? 403 : 500);
