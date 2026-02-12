@@ -16,7 +16,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     try {
         const user = await authorize(request);
         const report = await Report.findOne({ _id: id, orgid: user.orgid })
-            .populate('patient', 'firstName lastName phone age gender')
+            .populate('patient', 'firstName lastName mobile age gender')
             .populate('doctor', 'firstName lastName title')
             .populate('bill')
             .populate({
@@ -30,7 +30,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
             .populate({
                 path: 'results.groupResults.testId',
                 select: 'name type department unit referenceRanges interpretation method'
-            });
+            })
+            .select('-__v -orgid');
 
         if (!report) {
             return NextResponse.json({ status: 404, error: 'Report not found' }, { status: 404 });
@@ -75,7 +76,6 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         }
 
         if (doctorId && doctorId !== report.doctor.toString()) {
-            // Find doctor to confirm exists? Assuming ID comes from trusted list
             report.doctor = doctorId;
             billUpdates.doctor = doctorId;
         }
@@ -84,13 +84,12 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
         // 3. Sync to Bill if needed
         if (Object.keys(billUpdates).length > 0) {
-            // Update Bill but Ensure it also belongs to org
             await Bill.findOneAndUpdate({ _id: report.bill, orgid: user.orgid }, billUpdates);
         }
 
         // Return updated report
         const updatedReport = await Report.findOne({ _id: id, orgid: user.orgid })
-            .populate('patient', 'firstName lastName phone age gender')
+            .populate('patient', 'firstName lastName mobile age gender')
             .populate('doctor', 'firstName lastName title')
             .populate('bill')
             .populate({
@@ -104,7 +103,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             .populate({
                 path: 'results.groupResults.testId',
                 select: 'name type department unit referenceRanges interpretation method'
-            });
+            })
+            .select('-__v -orgid');
 
         return NextResponse.json({
             status: 200,
@@ -113,6 +113,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         });
 
     } catch (error: any) {
+        console.error('Report PUT Error:', error);
         const status = error.message.startsWith('Unauthorized') ? 401 : (error.message.startsWith('Forbidden') ? 403 : 500);
         return NextResponse.json({ status: status, error: (error as Error).message }, { status: status });
     }

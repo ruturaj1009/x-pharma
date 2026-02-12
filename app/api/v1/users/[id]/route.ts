@@ -13,7 +13,8 @@ export async function GET(
     try {
         const currentUser = await authorize(request);
         const { id } = await params;
-        const user = await User.findOne({ _id: id, orgid: currentUser.orgid }); // Org Scope
+        const user = await User.findOne({ _id: id, orgid: currentUser.orgid })
+            .select('-__v -orgid');
         if (!user) {
             const response: ApiResponse<null> = { status: 404, error: 'User not found' };
             return NextResponse.json(response, { status: 404 });

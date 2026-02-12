@@ -11,20 +11,24 @@ const PrintSettingsSchema = new Schema<IPrintSettings>({
 
     // Common settings
     headerType: { type: String, enum: ['none', 'text', 'image'], default: 'none' },
+    footerType: { type: String, enum: ['none', 'text', 'image'], default: 'none' },
     labName: { type: String },
     labAddress: { type: String },
     headerMargin: { type: Number, default: 20 },
     fontSize: { type: Number, default: 14 },
     headerImageUrl: { type: String },
     footerImageUrl: { type: String },
+    footerText: { type: String },
     showWatermark: { type: Boolean, default: true },
     watermarkText: { type: String, default: 'Health Amaze Demo Account' },
 
     // Report-specific settings
     letterhead1Name: { type: String },
     letterhead1SignatureUrl: { type: String },
+    showLetterhead1: { type: Boolean, default: true },
     letterhead2Name: { type: String },
-    letterhead2SignatureUrl: { type: String }
+    letterhead2SignatureUrl: { type: String },
+    showLetterhead2: { type: Boolean, default: true }
 }, { timestamps: true });
 
 // Compound index to ensure one settings doc per org per type
